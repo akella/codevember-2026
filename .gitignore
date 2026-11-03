@@ -1,0 +1,15 @@
+node_modules
+dist
+.DS_Store
+*.log
+*.local
+
+# ssam exports
+output
+process
+timelapse
+
+# Blender renders and backups: source scenes and scripts stay tracked
+**/blender/renders/
+**/blender/frames/
+*.blend1

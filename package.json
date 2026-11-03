@@ -1,0 +1,8 @@
+{
+  "name": "codevember-2026",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "npx -y http-server dist -c-1"
+  }
+}
