@@ -567,7 +567,7 @@ const sketch: Sketch<"webgpu"> = async ({
   window.addEventListener("keydown", onKey);
 
   // ---- GUI -----------------------------------------------------------------
-  const gui = new GUI({ title: "fold" });
+  const gui = new GUI({ title: "fold" }).close();
   gui.add(CONFIG, "scale", 0.2, 0.85, 0.01).onFinishChange(build);
   gui.add(CONFIG, "ease", Object.keys(EASINGS) as EaseName[]);
   gui.add(CONFIG, "anchor", ["edge", "corner"]).onChange(build);

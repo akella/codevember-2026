@@ -3,8 +3,9 @@
 https://akella.github.io/codevember-2026/
 
 Each `NN-name` folder is one experiment, with its own dependencies. On every push to `main`,
-GitHub Actions builds `01-fold` to `/1/`, `02-shatter` to `/2/`, and so on, then generates the
-gallery from the folder names. Build output is never committed.
+GitHub Actions builds `01-fold` to `/1/`, `02-shatter` to `/2/`, and so on. The gallery lists all
+30 prompts from `scripts/build.mjs`, and a day becomes a link once its folder exists. Build output
+is never committed.
 
 ## Adding a day
 

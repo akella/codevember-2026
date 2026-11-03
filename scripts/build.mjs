@@ -6,7 +6,40 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const dist = path.join(root, "dist");
 
-const run = (command, args, cwd) => {
+const prompts = [
+  "Fold",
+  "Shatter",
+  "Melt",
+  "Tangle",
+  "Moss",
+  "Orrery",
+  "Hollow",
+  "Tesseract",
+  "Membrane",
+  "Caustic",
+  "Rust",
+  "Feather",
+  "Labyrinth",
+  "Tension",
+  "Mirage",
+  "Spore",
+  "Kelp",
+  "Pendulum",
+  "Erosion",
+  "Cocoon",
+  "Bolt",
+  "Echo",
+  "Magma",
+  "Nest",
+  "Veil",
+  "Anamorph",
+  "Burrow",
+  "Hive",
+  "Portal",
+  "Dissolve",
+];
+
+const run =(command, args, cwd) => {
   const { status } = spawnSync(command, args, { cwd, stdio: "inherit" });
   if (status !== 0) throw new Error(`${command} ${args[0]} failed in ${cwd}`);
 };
@@ -14,14 +47,8 @@ const run = (command, args, cwd) => {
 const days = fs
   .readdirSync(root, { withFileTypes: true })
   .flatMap((entry) => {
-    const match = entry.isDirectory() && entry.name.match(/^(\d+)-(.+)$/);
-    if (!match) return [];
-    const words = match[2].replaceAll("-", " ");
-    return {
-      folder: entry.name,
-      day: Number(match[1]),
-      title: words[0].toUpperCase() + words.slice(1),
-    };
+    const match = entry.isDirectory() && entry.name.match(/^(\d+)-.+$/);
+    return match ? { folder: entry.name, day: Number(match[1]) } : [];
   })
   .sort((a, b) => a.day - b.day);
 
@@ -29,6 +56,9 @@ const days = fs
 // it shows up here as a folder with no package.json on CI.
 for (const [index, { folder, day }] of days.entries()) {
   const cwd = path.join(root, folder);
+  if (!prompts[day - 1]) {
+    throw new Error(`${folder} is outside days 1-${prompts.length}, so the gallery would not show it`);
+  }
   if (fs.existsSync(path.join(cwd, ".git"))) {
     throw new Error(`${folder} has its own .git: delete it and remove ssamGit() from its vite.config.ts`);
   }
@@ -50,13 +80,15 @@ for (const { folder, day } of days) {
   run("npx", ["vite", "build", "--base", "./", "--outDir", outDir, "--emptyOutDir"], cwd);
 }
 
-const escapeHtml = (text) =>
-  text.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`);
-
-const tiles = days.map(({ day, title }) => {
+const tiles = prompts.map((prompt, index) => {
+  const day = index + 1;
+  const label = `<span class="number">${day}</span><span>${prompt}</span>`;
+  if (!days.some((built) => built.day === day)) {
+    return `<li class="soon"><div>${label}</div></li>`;
+  }
   const hasCover = fs.existsSync(path.join(dist, String(day), "cover.jpg"));
   const style = hasCover ? ` style="background-image: url(${day}/cover.jpg)"` : "";
-  return `<li${style}><a href="./${day}/"><span class="number">${day}</span><span>${escapeHtml(title)}</span></a></li>`;
+  return `<li${style}><a href="./${day}/">${label}</a></li>`;
 });
 
 const template = fs.readFileSync(path.join(root, "index.html"), "utf8");
