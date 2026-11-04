@@ -7,6 +7,7 @@ import {
   Mesh,
   Vector3,
 } from "three/webgpu";
+import { inkAttribute } from "./curve";
 import { EASINGS, type Ease } from "./easing";
 
 const UP = new Vector3(0, 1, 0);
@@ -115,6 +116,23 @@ export function createRollingCube(material: Material, thickness: number) {
     rest.push(rollMatrix(axis, pivot, Math.PI / 2).multiply(rest[k]));
     centers.push(centers[k].clone().addScaledVector(dirs[k], S));
   }
+
+  // inside of each face: its piece of the painted curve, by landing order
+  [...faces]
+    .sort((a, b) => a.dropAt - b.dropAt)
+    .forEach((f, tile) => {
+      const k = Math.min(f.dropAt, ROLLS);
+      const { geometry } = f.mesh;
+      geometry.setAttribute(
+        "ink",
+        inkAttribute(geometry, rest[k], centers[k], tile),
+      );
+      f.mesh.userData.ink = {
+        tile,
+        landed: rest[k].toArray(),
+        center: centers[k].toArray(),
+      };
+    });
 
   // the face that is never dropped: it's what the next cube gets glued to
   const lastFace = faces.find((f) => f.dropAt === Infinity)!;

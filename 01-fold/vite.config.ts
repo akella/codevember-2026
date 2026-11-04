@@ -24,6 +24,17 @@ const foldSceneExport = (): Plugin => ({
         client.send("fold:exported", { file });
       },
     );
+    server.ws.on(
+      "fold:export-image",
+      (data: { name: string; dataUrl: string }, client) => {
+        const safe = String(data.name).replace(/[^\w.-]/g, "_") || "image";
+        const file = path.resolve("blender", `${safe}.png`);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        const base64 = data.dataUrl.slice(data.dataUrl.indexOf(",") + 1);
+        fs.writeFileSync(file, Buffer.from(base64, "base64"));
+        client.send("fold:exported", { file });
+      },
+    );
   },
 });
 

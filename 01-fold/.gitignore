@@ -26,3 +26,6 @@ dist-ssr
 process
 output
 timelapse
+
+# Blender: scenes, scripts, frames and renders stay local
+blender/

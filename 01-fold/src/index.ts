@@ -8,13 +8,19 @@ import { dof } from "three/examples/jsm/tsl/display/DepthOfFieldNode.js";
 import { denoise } from "three/examples/jsm/tsl/display/DenoiseNode.js";
 import { ao } from "three/examples/jsm/tsl/display/GTAONode.js";
 import {
+  attribute,
   colorToDirection,
   directionToColor,
+  fwidth,
+  materialColor,
+  mix,
   mrt,
   normalView,
   output,
   pass,
   sample,
+  smoothstep,
+  texture,
   uniform,
   vec4,
 } from "three/tsl";
@@ -29,6 +35,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  MeshStandardNodeMaterial,
   SphereGeometry,
   CylinderGeometry,
   NeutralToneMapping,
@@ -45,13 +52,36 @@ import {
   WebGPURenderer,
 } from "three/webgpu";
 import { createRollingCube } from "./cube";
+import { ATLAS, createCurveAtlas, type Net } from "./curve";
 import { EASINGS, type EaseName } from "./easing";
 import { createPaperTextures } from "./paper";
 import { createPCSSFilter, createSoftShadowFilter } from "./softShadow";
 
+/** output formats: canvas size, default spread, and a camera preset (VIEWS) */
+const FORMATS = {
+  square: { dimensions: [1024, 1024] as [number, number], spread: 1.5 }, // twitter
+  insta: { dimensions: [1080, 1920] as [number, number], spread: 2.35 },
+};
+type FormatName = keyof typeof FORMATS;
+const FORMAT_KEY = "fold-format";
+
+/** ?insta=true|false wins, then the last choice made in the GUI */
+function loadInsta() {
+  const q = new URLSearchParams(location.search).get("insta");
+  if (q !== null) return q === "true";
+  try {
+    return localStorage.getItem(FORMAT_KEY) === "insta";
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // live-editable through the GUI (top right)
 const CONFIG = {
+  /** off: square · on: 1080×1920 for instagram. Sets size + camera, and reloads
+   *  the page: ssam only reads the export size at startup */
+  insta: loadInsta(),
   /** each nested cube is this fraction of the previous one */
   scale: 0.5,
   /** easing of each single roll */
@@ -64,13 +94,19 @@ const CONFIG = {
   camera: "center" as "follow" | "center",
   /** (chains > 1) max random head start per chain, in levels: a chain one
    *  level ahead is the same chain shrunk once more towards the centre */
-  spread: 1.5,
+  spread: FORMATS[loadInsta() ? "insta" : "square"].spread,
   /** random seed for the head starts */
   seed: 1,
   /** camera distance multiplier (smaller = closer) */
   camDistance: 1.5,
   /** paper thickness relative to cube size */
   thickness: 0.012,
+  /** paint a continuous curve on the inside of the cubes */
+  curve: true,
+  /** its width at the start of a cube, relative to that cube's size; it thins
+   *  down to `scale` × this by the end of the cube, where the next one starts */
+  curveWidth: 0.2,
+  curveColor: "#0b0b0d",
   /** scrub the loop by hand */
   /** depth of field, focused on a ring around the vanishing point */
   dof: true,
@@ -165,20 +201,36 @@ type Cube = ReturnType<typeof createRollingCube>;
  * Press "c" in the sketch to capture one, then paste the logged line here.
  */
 type SavedView = { pos: number[]; target: number[] };
-const VIEWS: Partial<Record<"follow" | "center", SavedView>> = {
-  center: {
-    pos: [-0.7319182267917418, 0.5283071129489721, 1.5494208925488806],
-    target: [-0.34424236844453465, -0.04024908465045572, 0.0036743018024271864],
+const VIEWS: Record<
+  FormatName,
+  Partial<Record<"follow" | "center", SavedView>>
+> = {
+  square: {
+    center: {
+      pos: [-0.7319182267917418, 0.5283071129489721, 1.5494208925488806],
+      target: [
+        -0.34424236844453465, -0.04024908465045572, 0.0036743018024271864,
+      ],
+    },
+  },
+  insta: {
+    center: {
+      pos: [-1.187434394128706, 0.962265572283814, 1.5789326081458446],
+      target: [
+        -0.3442423684445346, -0.04024908465045572, 0.0036743018024271478,
+      ],
+    },
   },
 };
 
-const viewKey = () => `fold-view-${CONFIG.camera}`;
+const format = (): FormatName => (CONFIG.insta ? "insta" : "square");
+const viewKey = () => `fold-view-${format()}-${CONFIG.camera}`;
 function loadView(): SavedView | undefined {
   try {
     const s = localStorage.getItem(viewKey());
     if (s) return JSON.parse(s) as SavedView;
   } catch {}
-  return VIEWS[CONFIG.camera];
+  return VIEWS[format()][CONFIG.camera];
 }
 
 let toastEl: HTMLDivElement | undefined;
@@ -250,7 +302,7 @@ const sketch: Sketch<"webgpu"> = async ({
   scene.environmentIntensity = 0.55;
 
   const { normalMap, map } = createPaperTextures(1024);
-  const paperMat = new MeshStandardMaterial({
+  const paperMat = new MeshStandardNodeMaterial({
     color: PALETTE.paper,
     map,
     normalMap,
@@ -258,6 +310,18 @@ const sketch: Sketch<"webgpu"> = async ({
     roughness: 0.92,
     metalness: 0,
   });
+
+  // painted curve: ink.xy = atlas uv, ink.z = 1 on the inside of a face
+  const curve = createCurveAtlas();
+  const inkOn = uniform(1);
+  const inkColor = uniform(new Color());
+  const ink = attribute("ink", "vec3");
+  const coverage = texture(curve.texture, ink.xy).r;
+  const edge = fwidth(coverage).mul(0.75).add(0.002);
+  const inkMask = smoothstep(edge.oneMinus().mul(0.5), edge.add(1).mul(0.5), coverage)
+    .mul(ink.z)
+    .mul(inkOn);
+  paperMat.colorNode = mix(materialColor, vec4(inkColor, 1), inkMask);
 
   // Plain (untextured) floor on purpose: a tiled texture would visibly
   // change scale at the loop point. Everything lies on it at y = 0.
@@ -365,6 +429,8 @@ const sketch: Sketch<"webgpu"> = async ({
     R: 1,
     /** camera → look distance at zoom 1 (drives fog) */
     viewDist: 8,
+    /** the unfolded net, as the curve is drawn on it */
+    net: null as Net | null,
   };
   scene.add(W.root);
 
@@ -432,6 +498,9 @@ const sketch: Sketch<"webgpu"> = async ({
       .makeTranslation(X0, 0, Z0)
       .multiply(new Matrix4().makeScale(r, r, r));
     W.GLUE.copy(probe.final).invert().multiply(NEXT);
+
+    W.net = { centers: probe.centers, X0, Z0, r };
+    curve.draw(W.net, CONFIG.curveWidth);
 
     const glued = new Vector3(edgeX - t - r / 2, box.max.y, gluedZ);
     const lift = glued.sub(new Vector3(X0, 0, Z0)).divideScalar(r);
@@ -553,14 +622,14 @@ const sketch: Sketch<"webgpu"> = async ({
       const line = `${CONFIG.camera}: ${JSON.stringify(view)},`;
       console.log(`[fold] view captured →`, line);
       navigator.clipboard?.writeText(line).catch(() => {});
-      toast(`view saved (${CONFIG.camera}) – copied to clipboard`);
+      toast(`view saved (${format()}, ${CONFIG.camera}) – copied to clipboard`);
     } else if (e.key === "e") {
       exportScene();
     } else if (e.key === "x") {
       try {
         localStorage.removeItem(viewKey());
       } catch {}
-      toast(`view reset (${CONFIG.camera})`);
+      toast(`view reset (${format()}, ${CONFIG.camera})`);
       build();
     }
   };
@@ -568,6 +637,15 @@ const sketch: Sketch<"webgpu"> = async ({
 
   // ---- GUI -----------------------------------------------------------------
   const gui = new GUI({ title: "fold" }).close();
+  gui.add(CONFIG, "insta").onChange(() => {
+    try {
+      localStorage.setItem(FORMAT_KEY, format());
+    } catch {}
+    const url = new URL(location.href);
+    url.searchParams.delete("insta"); // it would override the new choice
+    history.replaceState(null, "", url);
+    location.reload();
+  });
   gui.add(CONFIG, "scale", 0.2, 0.85, 0.01).onFinishChange(build);
   gui.add(CONFIG, "ease", Object.keys(EASINGS) as EaseName[]);
   gui.add(CONFIG, "anchor", ["edge", "corner"]).onChange(build);
@@ -581,6 +659,9 @@ const sketch: Sketch<"webgpu"> = async ({
   gui.add(CONFIG, "seed", 1, 100, 1).onFinishChange(build);
   gui.add(CONFIG, "camDistance", 0.5, 3, 0.05).onFinishChange(build);
   gui.add(CONFIG, "thickness", 0.003, 0.04, 0.001).onFinishChange(build);
+  gui.add(CONFIG, "curve");
+  gui.add(CONFIG, "curveWidth", 0.02, 0.44, 0.01).onFinishChange(build);
+  gui.addColor(CONFIG, "curveColor");
   const fx = gui.addFolder("look");
   fx.add(CONFIG, "dof").onChange(updateOutput);
   fx.add(CONFIG, "focusRing", 0, 1.5, 0.01);
@@ -702,6 +783,8 @@ const sketch: Sketch<"webgpu"> = async ({
       C: W.C.toArray(),
       R: W.R,
       zoom: Math.pow(CONFIG.scale, CONFIG.playhead),
+      size: FORMATS[format()].dimensions,
+      atlas: ATLAS,
       shapes,
       faces,
       camera: {
@@ -736,7 +819,12 @@ const sketch: Sketch<"webgpu"> = async ({
    * i.e. duration × fps) to blender/frames/NNNN.json. Freezes the playhead
    * and lets the render loop run between frames so everything is updated.
    */
-  async function exportSequence(count = 360, total = 360, start = 0) {
+  async function exportSequence(
+    count = 360,
+    total = 360,
+    start = 0,
+    dir = "frames",
+  ) {
     const wasFrozen = CONFIG.freeze;
     CONFIG.freeze = true;
     const tick = () => new Promise((r) => requestAnimationFrame(() => r(0)));
@@ -744,18 +832,33 @@ const sketch: Sketch<"webgpu"> = async ({
       CONFIG.playhead = ((start + i) % total) / total;
       await tick();
       await tick();
-      exportScene(String(i).padStart(4, "0"), "frames");
+      exportScene(String(start + i).padStart(4, "0"), dir);
     }
     CONFIG.freeze = wasFrozen;
-    toast(`exported ${count} frames → blender/frames/`);
+    toast(`exported ${count} frames → blender/${dir}/`);
     return count;
   }
   (window as unknown as Record<string, unknown>).__foldExportSequence =
     exportSequence;
 
+  /** the curve for Blender, at 2× the resolution: blender/curve_atlas.png */
+  function exportCurve() {
+    if (!import.meta.hot || !W.net) return;
+    const atlas = createCurveAtlas(2048);
+    atlas.draw(W.net, CONFIG.curveWidth);
+    const dataUrl = atlas.canvas.toDataURL("image/png");
+    atlas.texture.dispose();
+    import.meta.hot.send("fold:export-image", { name: "curve_atlas", dataUrl });
+    return dataUrl.length;
+  }
+  (window as unknown as Record<string, unknown>).__foldExportCurve = exportCurve;
+
   wrap.render = ({ playhead }) => {
     if (!CONFIG.freeze) CONFIG.playhead = playhead;
     const p = CONFIG.playhead;
+
+    inkOn.value = CONFIG.curve ? 1 : 0;
+    inkColor.value.set(CONFIG.curveColor);
 
     const ease = EASINGS[CONFIG.ease] ?? EASINGS.inOutCubic;
     // cubes: level j starts the moment level j-1's last face has landed
@@ -856,13 +959,14 @@ const sketch: Sketch<"webgpu"> = async ({
     window.removeEventListener("keydown", onKey);
     gui.destroy();
     pmrem.dispose();
+    curve.texture.dispose();
     renderer.dispose();
   };
 };
 
 const settings: SketchSettings = {
   mode: "webgpu",
-  dimensions: [1024, 1024], // twitter
+  dimensions: FORMATS[format()].dimensions,
   pixelRatio: window.devicePixelRatio,
   animate: true,
   // one iteration = one full loop (the zoom makes it seamless)
