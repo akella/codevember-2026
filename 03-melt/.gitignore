@@ -1,0 +1,8 @@
+# earlier experiments, source models and renders: only the face is part of the piece
+experiments/
+blender/
+*.glb
+*.stl
+*.usdz
+*.mp4
+RESEARCH.md

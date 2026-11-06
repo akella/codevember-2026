@@ -1,0 +1,1 @@
+{"centre": [0.12, 0.14, 0.146], "yaw": -152, "pitch": 0, "roll": 0, "scale": 8, "shift": [0.19, -0.045, -0.41], "smooth": 2, "core": {"base": 9, "height": 0.014}, "hairline": 1.47, "hairSmooth": 11, "outline": {"centre": [0.0, 1.14], "radius": [0.56, 0.66]}, "forehead": {"from": 1.38, "to": 1.62, "reach": 0.06, "curve": 0.55, "lean": -0.3}, "cells": 256}
