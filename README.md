@@ -7,6 +7,8 @@ GitHub Actions builds `01-fold` to `/1/`, `02-shatter` to `/2/`, and so on. The 
 30 prompts from `scripts/build.mjs`, and a day becomes a link once its folder exists. Build output
 is never committed.
 
+The build adds a footer to every page, linking back to the gallery, so a day needs nothing for that.
+
 ## Adding a day
 
 1. Scaffold it with `npm create ssam@latest`, naming the folder `NN-name`.

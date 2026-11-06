@@ -39,6 +39,33 @@ const prompts = [
   "Dissolve",
 ];
 
+// Added to every built page, so that each experiment leads back to the list without having to know about it.
+// Difference blending keeps it readable on whatever the piece draws behind it.
+const footer = (day, folder) => `
+    <style>
+      #codevember {
+        position: fixed;
+        left: 12px;
+        bottom: 10px;
+        z-index: 1000;
+        font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #fff;
+        mix-blend-mode: difference;
+      }
+      #codevember a {
+        color: inherit;
+        text-decoration: none;
+      }
+      #codevember a:hover {
+        text-decoration: underline;
+      }
+    </style>
+    <footer id="codevember">
+      <a href="../">← Codevember 2026</a> · ${day} ${prompts[day - 1]} · Yuri Artiukh
+      <a href="https://github.com/akella/codevember-2026/tree/main/${folder}">github</a>
+    </footer>
+`;
+
 const run =(command, args, cwd) => {
   const { status } = spawnSync(command, args, { cwd, stdio: "inherit" });
   if (status !== 0) throw new Error(`${command} ${args[0]} failed in ${cwd}`);
@@ -78,6 +105,8 @@ for (const { folder, day } of days) {
   if (!fs.existsSync(path.join(cwd, "node_modules"))) run("npm", ["ci"], cwd);
   // vite directly rather than `npm run build`, so a type error can't block a sketch.
   run("npx", ["vite", "build", "--base", "./", "--outDir", outDir, "--emptyOutDir"], cwd);
+  const page = path.join(outDir, "index.html");
+  fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("</body>", `${footer(day, folder)}  </body>`));
 }
 
 const tiles = prompts.map((prompt, index) => {
