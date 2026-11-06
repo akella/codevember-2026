@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tangle · Codevember 2026</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      body {
+        background: #18151c;
+      }
+      canvas {
+        display: block;
+        position: relative;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .ready canvas {
+        opacity: 1;
+        transition-duration: 0.7s;
+      }
+      .lil-gui.root {
+        transition: opacity 0.3s ease;
+      }
+      body:not(.ready) .lil-gui.root {
+        opacity: 0;
+        pointer-events: none;
+      }
+      /* the piece's own backdrop as it comes out of the renderer, so the canvas fades in with no seam */
+      #backdrop {
+        --side: min(100vw, 100vh);
+        position: fixed;
+        inset: 0;
+        margin: auto;
+        width: var(--side);
+        height: var(--side);
+        background: radial-gradient(
+          circle var(--side) at 55% 45%,
+          #c3bdce 10%,
+          #c0bacb 20%,
+          #b8b2c4 30%,
+          #ada5b8 40%,
+          #9f96ab 50%,
+          #91859d 60%,
+          #867792 70%,
+          #81728d 80%
+        );
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 14px;
+        pointer-events: none;
+        transition: opacity 0.35s ease;
+      }
+      .ready #loading {
+        opacity: 0;
+      }
+      .ready.working #loading {
+        opacity: 1;
+      }
+      .working #stage {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+      .working .lil-gui.root {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      #loading svg {
+        width: 104px;
+        height: 104px;
+        overflow: visible;
+      }
+      #loading path {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3.4;
+      }
+      #loading .track {
+        stroke: #2b2733;
+        opacity: 0.09;
+      }
+      #loading .cord {
+        stroke: #16151c;
+      }
+      #loading circle {
+        fill: #fff;
+        filter: drop-shadow(0 0 3px #fff);
+      }
+      #loading p {
+        margin: 0;
+        font: 13px/1.4 system-ui, sans-serif;
+        letter-spacing: 0.04em;
+        color: #4a4453;
+      }
+      #loading.failed svg {
+        display: none;
+      }
+      #loading.failed p {
+        max-width: 26em;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="backdrop"></div>
+    <canvas id="stage"></canvas>
+    <div id="loading">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <path class="track" />
+        <path class="cord" />
+        <circle r="4.6" cx="50" cy="37" />
+      </svg>
+      <p>loading</p>
+    </div>
+    <script type="module" src="./src/index.ts"></script>
+  </body>
+</html>

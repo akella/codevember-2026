@@ -1,0 +1,28 @@
+{
+  "name": "04-tangle",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noemit && vite build",
+    "preview": "vite preview",
+    "bake": "node --experimental-strip-types --no-warnings sim/bake.ts"
+  },
+  "dependencies": {
+    "mediabunny": "^1.65.1",
+    "three": "^0.182.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/three": "^0.182.0",
+    "playwright-core": "^1.64.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-glsl": "^1.5.5",
+    "vite-plugin-ssam-export": "^0.1.4",
+    "vite-plugin-ssam-ffmpeg": "^0.2.5"
+  }
+}

@@ -1,0 +1,32 @@
+// node sim/lace-shot.mjs <out.png> [query] [rope] [fov]: an aglet up close, through a long lens so the focus plane stays put
+import { chromium } from "playwright-core";
+import fs from "node:fs"; import os from "node:os";
+const [out, query = "look=lace", rope = "3", fov = "7"] = process.argv.slice(2);
+const base = os.homedir() + "/Library/Caches/ms-playwright/chromium-1243/";
+const dir = fs.readdirSync(base).find((d) => d.startsWith("chrome-"));
+const app = fs.readdirSync(base + dir).find((d) => d.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}${dir}/${app}/Contents/MacOS/${app.replace(".app", "")}`, headless: true, args: ["--enable-unsafe-webgpu", "--enable-features=Vulkan,WebGPU", "--use-angle=metal", "--ignore-gpu-blocklist"] });
+const page = await browser.newPage({ viewport: { width: 800, height: 800 } });
+page.on("pageerror", (e) => console.log("PAGE ERROR", e.message));
+page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") console.log(m.type(), m.text().slice(0, 400)); });
+await page.goto(`http://localhost:5174/?${query}`);
+await page.waitForFunction(() => !document.querySelector("#loading"), null, { timeout: 90000 });
+await page.addStyleTag({ content: ".lil-gui{display:none!important}" });
+await page.evaluate(async ([r, fov]) => {
+  const s = window.__stage;
+  await s.seek(0.3);
+  if (fov >= 50) return;
+  const { nodes, width } = window.__ropes;
+  const o = (r * width + 6) * 4;
+  const c = s.camera;
+  const target = c.position.clone().set(nodes[o], nodes[o + 1], nodes[o + 2]);
+  const away = c.position.clone().sub(s.controls.target).normalize().multiplyScalar(6.3);
+  s.controls.target.copy(target);
+  c.position.copy(target).add(away);
+  c.fov = fov;
+  c.updateProjectionMatrix();
+  await s.seek(0.3);
+}, [+rope, +fov]);
+await new Promise((r) => setTimeout(r, 300));
+await page.screenshot({ path: out });
+await browser.close();
