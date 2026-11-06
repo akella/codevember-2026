@@ -259,6 +259,19 @@ function toast(msg: string) {
   toastTimer = window.setTimeout(() => (toastEl!.style.opacity = "0"), 1800);
 }
 
+/**
+ * three's physical lighting writes `v.xy.x`, a swizzle of a swizzle on a variable. That's valid, but
+ * Chromium's shader compiler can fail on it when turning bounds checks into Metal, and then a
+ * material's pipeline is never made and its mesh isn't drawn. See 04-tangle/src/stage.ts.
+ */
+function flattenSwizzles(renderer: WebGPURenderer) {
+  const { device } = renderer.backend as unknown as { device?: GPUDevice };
+  if (!device) return; // the WebGL fallback
+  const create = device.createShaderModule.bind(device);
+  const flat = (_: string, first: string, second: string) => `.${first["xyzw".indexOf(second)]}`;
+  device.createShaderModule = (descriptor) => create({ ...descriptor, code: descriptor.code.replace(/\.([xyzw]{2,4})\.([xyzw])\b/g, flat) });
+}
+
 const sketch: Sketch<"webgpu"> = async ({
   wrap,
   canvas,
@@ -288,6 +301,7 @@ const sketch: Sketch<"webgpu"> = async ({
         ? PCFSoftShadowMap
         : PCFShadowMap;
   await renderer.init();
+  flattenSwizzles(renderer);
 
   const stats = new Stats();
   document.body.appendChild(stats.dom);
