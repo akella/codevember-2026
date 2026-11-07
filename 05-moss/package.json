@@ -1,0 +1,23 @@
+{
+  "name": "05-moss",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noemit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.182.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.182.0",
+    "@webgpu/types": "^0.1.74",
+    "playwright-core": "^1.65.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}

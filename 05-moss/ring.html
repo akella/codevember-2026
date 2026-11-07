@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Moss, ring · Codevember 2026</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0c0f0a;
+        color: #9a9f8c;
+        font: 14px system-ui, sans-serif;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        margin: 0;
+      }
+      #hint {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 34px;
+        margin: 0;
+        text-align: center;
+        color: #c9cdb9;
+        opacity: 0.75;
+        pointer-events: none;
+        transition: opacity 1.2s;
+      }
+      #hint.gone {
+        opacity: 0;
+      }
+      #forms {
+        position: fixed;
+        right: 12px;
+        bottom: 8px;
+        display: flex;
+        gap: 2px;
+      }
+      #forms a {
+        margin-left: 10px;
+      }
+      #forms button,
+      #forms a {
+        padding: 4px 8px;
+        border: 0;
+        background: none;
+        color: #c9cdb9;
+        font: inherit;
+        font-size: 13px;
+        text-decoration: none;
+        opacity: 0.55;
+        cursor: pointer;
+      }
+      @media (max-width: 640px) {
+        #forms {
+          bottom: 30px;
+        }
+        #hint {
+          bottom: 62px;
+        }
+      }
+      #forms a:hover,
+      #forms a:focus-visible,
+      #forms button:hover,
+      #forms button:focus-visible,
+      #forms button.on {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <p id="loading">growing</p>
+    <p id="hint" class="gone">click the stone to plant moss · scroll to look closer</p>
+    <nav id="forms" aria-label="form"></nav>
+    <script type="module" src="./src/ring.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Moss · Codevember 2026</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0c0f0a;
+        color: #9a9f8c;
+        font: 14px system-ui, sans-serif;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      #other {
+        position: fixed;
+        right: 12px;
+        bottom: 10px;
+        color: #c9cdb9;
+        font-size: 13px;
+        text-decoration: none;
+        opacity: 0.55;
+      }
+      #other:hover,
+      #other:focus-visible {
+        opacity: 1;
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <p id="loading">growing</p>
+    <a id="other" href="./ring.html">ring</a>
+    <script type="module" src="./src/triangle/index.ts"></script>
+  </body>
+</html>
