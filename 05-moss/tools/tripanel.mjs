@@ -34,7 +34,7 @@ const result = await page.evaluate(async () => {
   const floor = diff(start, grab());
   const keys = Object.keys(t.settings);
   const saved = { ...t.settings };
-  const ranges = { height: [0.3, 2.5], tuft: [0.5, 2.5], tops: [0, 1], sides: [0, 1], sideHeight: [0.1, 1.2], density: [0.1, 1], arrive: [0.4, 3], life: [3, 8.6], rim: [0, 3], sway: [0, 1.5], gold: [0, 1], dark: [0, 1], fruit: [0, 6], dew: [0, 2.5], splay: [0, 2.5], wander: [0, 3], leaf: [0.4, 2.2], width: [0.4, 2.5], open: [0.3, 1.5], curl: [-0.6, 1], warmth: [-0.5, 0.5], saturation: [0, 2], brightness: [0.3, 2], glow: [0, 3], seconds: [0.8, 3], jump: [0.6, 3.5], blur: [0, 3], mossBall: [false, true], strand: [0.2, 1.3], strands: [0.2, 1], inertia: [0, 2], spring: [0.6, 3.5], damping: [0.1, 0.9], drag: [0, 2], across: [-0.5, 1.5] };
+  const ranges = { height: [0.3, 2.5], tuft: [0.5, 2.5], tops: [0, 1], sides: [0, 1], sideHeight: [0.1, 1.2], density: [0.1, 1], arrive: [0.4, 3], life: [3, 8.6], rim: [0, 3], sway: [0, 1.5], gold: [0, 1], dark: [0, 1], fruit: [0, 6], dew: [0, 2.5], splay: [0, 2.5], wander: [0, 3], leaf: [0.4, 2.2], width: [0.4, 2.5], open: [0.3, 1.5], curl: [-0.6, 1], warmth: [-0.5, 0.5], saturation: [0, 2], brightness: [0.3, 2], glow: [0, 3], seconds: [0.8, 3], jump: [0.6, 3.5], blur: [0, 3], mossBall: [false, true], strand: [0.2, 1.3], strands: [0.2, 1], inertia: [0, 2], spring: [0.6, 3.5], damping: [0.1, 0.9], drag: [0, 2], across: [-0.5, 1.5], onLanding: [false, true], growth: [0.3, 3] };
   const effect = {};
   for (const key of keys) {
     const [lo, hi] = ranges[key];

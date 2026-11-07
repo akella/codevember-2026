@@ -24,7 +24,7 @@ fn cull(@builtin(global_invocation_id) gid: vec3u) {
   let life = scene.lives[stone];
   // the page plants more shoots than it uses, and the panel says how many of them come up
   if (hash1(i + 555u) > scene.moss[1].w) { return; }
-  let g = alive(life.y, fate.x, fate.y);
+  let g = alive(life.y, fate.x, fate.y, scene.rise.x);
   if (g < 0.02) { return; }
 
   let s = shoots[i];

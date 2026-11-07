@@ -18,7 +18,7 @@ fn boxDistance(p: vec3f, b: vec3f, r: f32) -> f32 {
   return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
 }
 
-/** how a place on a stone is doing, `phi` hops after the ball landed: it comes at `first`, gone by `last` */
-fn alive(phi: f32, first: f32, last: f32) -> f32 {
-  return smoothstep(first, first + 0.42, phi) * (1.0 - smoothstep(last - 1.8, last, phi));
+/** how a place on a stone is doing, `phi` hops after the ball landed: it comes at `first` over `rise`, gone by `last` */
+fn alive(phi: f32, first: f32, last: f32, rise: f32) -> f32 {
+  return smoothstep(first, first + rise, phi) * (1.0 - smoothstep(last - 1.8, last, phi));
 }

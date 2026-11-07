@@ -42,8 +42,8 @@ fn solidFs(i: Solid) -> Picture {
   var albedo = i.tone.rgb * (0.8 + 0.4 * noise((p + life.z) * 70.0));
 
   // where moss is or has just been the stone is dark with wet, and it dries slower than the moss dies
-  let moss = alive(life.y, first, last);
-  let stain = alive(life.y, min(first, 90.0), min(last + 1.4, 8.95));
+  let moss = alive(life.y, first, last, scene.rise.x);
+  let stain = alive(life.y, min(first, 90.0), min(last + 1.4, 8.95), scene.rise.x);
   albedo = mix(albedo, albedo * vec3f(0.42, 0.52, 0.3), stain * 0.8);
   albedo = mix(albedo, albedo * vec3f(0.12, 0.14, 0.08), smoothstep(0.1, 0.7, moss));
 

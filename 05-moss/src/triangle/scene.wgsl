@@ -11,6 +11,7 @@ struct Scene {
   sways: array<vec4f, 9>,   // how far behind its stone a shoot's tip is being left
   moss: array<vec4f, 4>,    // the panel: see `mossData` in index.ts
   hair: array<vec4f, 4>,    // how far a strand's tip is left behind, fast to slow, then x length, y core, z share
+  rise: vec4f,              // x hops a place takes to grow
 };
 
 /** stones are layers 1 to 9: see Picture in common.wgsl */
@@ -85,7 +86,10 @@ fn patchAt(p: vec3f, seed: f32) -> Patch {
 
   let away = length(middle - vec3f(0.0, 1.0, 0.0));
   // nothing comes up under the ball while it is still there
-  let first = select(99.0, 0.16 + (away * 0.34 + c.id * 0.16 + (1.0 - dome) * 0.3) / scene.moss[2].x, there > 0.5);
+  let slowly = 0.16 + (away * 0.34 + c.id * 0.16 + (1.0 - dome) * 0.3) / scene.moss[2].x;
+  // or it bursts out from the blow, round the ball, and only what the ball is on has to wait for it to leave
+  let bursts = max((max(away - 0.5, 0.0) * 0.1 + c.id * 0.05 + (1.0 - dome) * 0.08) / scene.moss[2].x, (1.0 - smoothstep(0.4, 0.75, away)) * 0.34);
+  let first = select(99.0, select(slowly, bursts, scene.moss[3].w > 0.5), there > 0.5);
   let life = scene.moss[2].y;
   let last = mix(life * 0.58, life, fract(c.id * 11.3)) - (1.0 - dome) * scene.moss[2].z;
   return Patch(dome, first, last, -c.to / max(length(c.to), 1e-4), c.id);

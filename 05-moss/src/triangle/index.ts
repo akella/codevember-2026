@@ -76,22 +76,24 @@ const main = async () => {
     tuft: 1,
     tops: 0.95,
     sides: 0.44,
-    sideHeight: 0.5,
+    sideHeight: 0.5115,
     density: 0.5,
     // how it lives
-    arrive: 1,
-    life: 8.3,
-    rim: 1,
-    sway: 0.5,
+    arrive: 2.015,
+    life: 7.224,
+    rim: 0,
+    sway: 1.5,
+    onLanding: true,
+    growth: 0.3,
     // what it is
-    gold: 0.1,
-    dark: 0.38,
-    fruit: 1,
-    dew: 0.7,
-    splay: 1,
-    wander: 1,
+    gold: 0.42,
+    dark: 0.435,
+    fruit: 5.85,
+    dew: 2.0375,
+    splay: 2.5,
+    wander: 1.455,
     // leaves
-    leaf: 1,
+    leaf: 1.134,
     width: 1,
     open: 1,
     curl: 0,
@@ -107,12 +109,12 @@ const main = async () => {
     across: 0.6,
     // the ball
     mossBall: true,
-    strand: 0.72,
-    strands: 0.85,
-    inertia: 1,
+    strand: 0.572,
+    strands: 1,
+    inertia: 1.07,
     spring: 1.5,
     damping: 0.3,
-    drag: 0.5,
+    drag: 0,
   };
   const remembered = "moss-triangle";
   const recall = () => {
@@ -147,7 +149,7 @@ const main = async () => {
 
   const frameData = new Float32Array(72);
   const frameBuffer = buffer(288, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
-  const sceneData = new Float32Array(49 * 4);
+  const sceneData = new Float32Array(50 * 4);
   const sceneBuffer = buffer(sceneData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
   const seeds = Array.from({ length: STONES }, (_, i) => 3.1 + i * 7.3);
 
@@ -538,9 +540,11 @@ const main = async () => {
     const m = settings;
     sceneData.set(
       // mossData, in the order scene.moss reads it
-      [m.height, m.tuft, m.tops, m.sides, m.sideHeight, m.splay, m.wander, m.density, m.arrive, m.life, m.rim, m.fruit, m.gold, m.dark, m.sway, 0],
+      [m.height, m.tuft, m.tops, m.sides, m.sideHeight, m.splay, m.wander, m.density, m.arrive, m.life, m.rim, m.fruit, m.gold, m.dark, m.sway, m.onLanding ? 1 : 0],
       41 * 4,
     );
+    // moss that bursts out of a landing has to be there at once, or it stops looking like the landing did it
+    sceneData.set([(m.onLanding ? 0.2 : 0.42) / m.growth, 0, 0, 0], 49 * 4);
     device.queue.writeBuffer(sceneBuffer, 0, sceneData);
   };
 
@@ -675,7 +679,9 @@ const main = async () => {
   let last = performance.now();
   const loop = (now: number) => {
     const elapsed = now - last;
-    const dt = Math.min(0.05, elapsed / 1000);
+    // everything is worked out from the time alone, so a slow frame can jump ahead: holding it back would put
+    // the piece in slow motion on a busy machine, and out of step with the film of it
+    const dt = Math.min(0.25, elapsed / 1000);
     last = now;
     if (running) {
       // a slow machine gives up pixels rather than smoothness. Long gaps are a hidden tab, not a slow one
@@ -716,7 +722,9 @@ const main = async () => {
   slider(growth, "sideHeight", 0.1, 1.2, "height on sides");
 
   const lifetime = gui.addFolder("life");
-  slider(lifetime, "arrive", 0.4, 3, "arrives, slow to fast");
+  lifetime.add(settings, "onLanding").name("starts on landing").listen().onChange(changed);
+  slider(lifetime, "growth", 0.3, 3, "grows, slow to fast");
+  slider(lifetime, "arrive", 0.4, 3, "spreads over a stone");
   slider(lifetime, "life", 3, 8.6, "lasts, in hops");
   slider(lifetime, "rim", 0, 3, "rim dies early");
   slider(lifetime, "sway", 0, 1.5, "sway");
