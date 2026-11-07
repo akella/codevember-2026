@@ -105,8 +105,11 @@ for (const { folder, day } of days) {
   if (!fs.existsSync(path.join(cwd, "node_modules"))) run("npm", ["ci"], cwd);
   // vite directly rather than `npm run build`, so a type error can't block a sketch.
   run("npx", ["vite", "build", "--base", "./", "--outDir", outDir, "--emptyOutDir"], cwd);
-  const page = path.join(outDir, "index.html");
-  fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("</body>", `${footer(day, folder)}  </body>`));
+  // a day can have more than one page, and they all sit at the top of its folder
+  for (const name of fs.readdirSync(outDir).filter((file) => file.endsWith(".html"))) {
+    const page = path.join(outDir, name);
+    fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("</body>", `${footer(day, folder)}  </body>`));
+  }
 }
 
 const tiles = prompts.map((prompt, index) => {
