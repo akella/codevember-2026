@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hollow</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      body {
+        background: #e8e2d8;
+      }
+      canvas {
+        display: block;
+      }
+      /* the series' footer (its build adds it to every page) is white, blended by difference: over this
+         piece's greys that comes out grey on grey. Here it's dark, on a pale plate. */
+      body #codevember {
+        mix-blend-mode: normal;
+        color: #2a2522;
+        background: rgba(255, 255, 255, 0.62);
+        padding: 3px 10px;
+        border-radius: 12px;
+        backdrop-filter: blur(6px);
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="./src/tunnel/index.ts"></script>
+  </body>
+</html>
