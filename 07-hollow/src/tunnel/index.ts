@@ -621,8 +621,11 @@ const sketch: Sketch<"webgpu"> = async ({ wrap, canvas, width, height, pixelRati
     if (pointsFor && look !== cellsDrawn) {
       cellsDrawn = look;
       drawCells();
+      // the first cells are there: a few frames on (so they're on screen), the page's loader goes
+      if (reveal < 0) reveal = 3;
     }
   };
+  let reveal = -1;
   let pointsWanted = "",
     reading = false;
   const mapAt = (angle: any, z: any) => vec2(angle.div(TAU).add(0.5), z.div(PERIOD));
@@ -1335,6 +1338,11 @@ const sketch: Sketch<"webgpu"> = async ({ wrap, canvas, width, height, pixelRati
     pixel.value = (2 * Math.tan((view.fov * Math.PI) / 360)) / size.y;
     texel.value.set(1 / size.x, 1 / size.y);
     post.render();
+    if (reveal > 0 && --reveal === 0) {
+      const loader = document.getElementById("loader");
+      loader?.classList.add("done");
+      loader?.addEventListener("transitionend", () => loader.remove(), { once: true });
+    }
     if (drawnFor && renderer.getPixelRatio() === ratio) {
       const done = drawnFor;
       drawnFor = null;

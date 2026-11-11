@@ -21,6 +21,44 @@
       canvas {
         display: block;
       }
+      /* Over the canvas till the wall's cells are baked (a couple of seconds: before that the tunnel is a
+         smooth tube), then it fades. In the page itself, so it's there before any script is. */
+      #loader {
+        position: fixed;
+        inset: 0;
+        /* (over the settings panel too, which comes before the cells do) */
+        z-index: 1500;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        align-items: center;
+        justify-content: center;
+        background: #e8e2d8;
+        color: #8a7f74;
+        font: 12px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        letter-spacing: 0.08em;
+        transition: opacity 1.1s ease;
+      }
+      #loader.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #loader i {
+        width: 30px;
+        height: 30px;
+        border: 2px solid rgba(138, 127, 116, 0.25);
+        border-top-color: #8a7f74;
+        border-radius: 50%;
+        animation: turn 0.9s linear infinite;
+      }
+      #loader.unsupported i {
+        display: none;
+      }
+      @keyframes turn {
+        to {
+          transform: rotate(360deg);
+        }
+      }
       /* the series' footer (its build adds it to every page) is white, blended by difference: over this
          piece's greys that comes out grey on grey. Here it's dark, on a pale plate. */
       body #codevember {
@@ -34,6 +72,15 @@
     </style>
   </head>
   <body>
+    <div id="loader"><i></i><span>growing the cells</span></div>
+    <script>
+      // (without WebGPU nothing will come: say so, rather than turn for ever)
+      if (!navigator.gpu) {
+        const loader = document.getElementById("loader");
+        loader.classList.add("unsupported");
+        loader.querySelector("span").textContent = "this one needs WebGPU: a recent Chrome, Edge or Safari";
+      }
+    </script>
     <script type="module" src="./src/tunnel/index.ts"></script>
   </body>
 </html>

@@ -13,7 +13,7 @@ const bad = [];
 page.on("pageerror", (e) => bad.push(e.message.slice(0, 400)));
 page.on("console", (m) => { if (["error", "warning"].includes(m.type())) bad.push(m.text().replace(/\s+/g, " ").slice(0, 400)); });
 await page.goto(`http://localhost:5307/index.html${process.env.QUERY ?? ""}`);
-await page.addStyleTag({ content: ".lil-gui{display:none!important}" });
+await page.addStyleTag({ content: ".lil-gui,#loader{display:none!important}" });
 await page.waitForFunction(() => window.__tunnel, null, { timeout: 60000 });
 await page.evaluate((s) => { const t = window.__tunnel; t.view.auto = false; t.view.detail = devicePixelRatio; if (s) for (const [k, v] of Object.entries(JSON.parse(s))) Object.assign(t[k], v); }, process.env.SET ?? "");
 await page.waitForFunction(() => window.__tunnel.ready(), null, { timeout: 60000, polling: 200 });

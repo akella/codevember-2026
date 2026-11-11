@@ -27,7 +27,7 @@ const bad = [];
 page.on("pageerror", (e) => bad.push(e.message.slice(0, 300)));
 page.on("crash", () => console.log("page crashed"));
 await page.goto(`${process.env.BASE ?? "http://localhost:5307"}/index.html`);
-await page.addStyleTag({ content: ".lil-gui{display:none!important}" });
+await page.addStyleTag({ content: ".lil-gui,#loader{display:none!important}" });
 await page.waitForFunction(() => window.__tunnel, null, { timeout: 60000 });
 await page.evaluate((s) => {
   const t = window.__tunnel;
