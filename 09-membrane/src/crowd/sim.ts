@@ -90,6 +90,8 @@ export const C = {
   drive: 1, // the most she is helped on, likewise
   curve: 1, // the most she is turned aside, likewise
   steer: 4, // how quickly the steering answers, a second
+  puttLate: 3.5, // seconds past sleepAt before one still not there is taken to stand where she is
+  puttGrace: 2.5, // and seconds she has to roll on to her place once whatever stood on it has burst
   puttPush: 6, // the most a solved push can be, in the mother's radii a second
   crossCost: 50, // how much two daughters sent across each other's way count against a sharing, against the pushes it needs
   backMost: Infinity, // the most a solved push may go back across her mother, in the mother's radii a second
@@ -126,6 +128,19 @@ export const C = {
 const PASSES = 2;
 // (putt) pushes solved beforehand by tools/cputt.ts, and what crowd they are for
 export const baked = { push: null as number[] | null, lands: null as number[] | null, sign: "" };
+// (putt) v turned by `angle` about the level axis (kx, 0, kz)
+function turn(v: number[], kx: number, kz: number, angle: number, out: number[]) {
+  const c = Math.cos(angle),
+    s = Math.sin(angle);
+  const dot = kx * v[0] + kz * v[2];
+  // k x v, with k = (kx, 0, kz)
+  const cx = -kz * v[1],
+    cy = kz * v[0] - kx * v[2],
+    cz = kx * v[1];
+  out[0] = v[0] * c + cx * s + kx * dot * (1 - c);
+  out[1] = v[1] * c + cy * s;
+  out[2] = v[2] * c + cz * s + kz * dot * (1 - c);
+}
 // (putt) A x = b for a small symmetric A, by elimination with pivoting
 function solve(A: Float64Array, b: Float64Array, n: number) {
   const a = Float64Array.from(A),
@@ -195,6 +210,7 @@ export class Cell extends Body {
   shove = [0, 0, 0]; // what is left of a push from a burst near it, to be given over the next moments
   judged = true; // (free) its litter's rehearsal has been judged
   ghost = 0; // (putt) an unseen copy, let out to see where a push takes her: which try she is, from 1
+  freedAt = 0; // (putt) the last step her place was still taken by something standing on it
   helped = 0; // (putt) how much she has been slowed, helped on or turned, in all: her radii a second a second, summed over steps
   stirred = 0; // changes whenever anything about it moves: whoever draws it need only look again then
   constructor(mesh: Ball, x: Float32Array, p: Float32Array, kids: number) {
@@ -659,6 +675,7 @@ export class Crowd {
     cell.judged = true;
     cell.ghost = 0;
     cell.helped = 0;
+    cell.freedAt = this.step;
     cell.place(at[0], at[1], at[2], cell.q0);
     cell.kick(v[0], v[1], v[2]);
     cell.stirred++;
@@ -1357,10 +1374,18 @@ export class Crowd {
     b.ox = ox;
     b.oz = oz;
   }
-  standAs(b: Cell) {
+  // (putt) How a body is rolled from where its middle is to a point on the floor: the level axis square
+  // to the way, and the angle, as far as it goes over how high its middle is.
+  rollTo(b: Cell, c: number[], x: number, z: number) {
+    const dx = x - c[0],
+      dz = z - c[2];
+    const d = Math.hypot(dx, dz);
+    if (d < 1e-9) return [1, 0, 0];
+    return [dz / d, -dx / d, d / Math.max(0.3 * b.R, c[1])];
+  }
+  standAs(b: Cell, q: ArrayLike<number> = b.q) {
     // (as `pose` will turn it about the upright at this moment)
-    const a = ((this.step % this.TS) / this.TS) * Math.PI * 2 * this.rev[b.idx] + this.phase[b.idx],
-      q = b.q;
+    const a = ((this.step % this.TS) / this.TS) * Math.PI * 2 * this.rev[b.idx] + this.phase[b.idx];
     const ch = Math.cos(a / 2),
       sh = Math.sin(a / 2);
     // turned back about the upright by as much as `pose` will turn it
@@ -1566,10 +1591,37 @@ export class Crowd {
         const f = smooth(0, C.easeFor, (this.step - b.easedAt) * H);
         const { x, p } = b;
         const at = [0, 0, 0];
-        for (let i = 0; i < b.n * 3; i += 3) {
-          this.stand(b, i, at);
-          for (let r = 0; r < 3; r++) x[i + r] = p[i + r] + (at[r] - p[i + r]) * f;
-        }
+        if (C.putt) {
+          // (putt: rolled there, not slid: the shape it had turned about the level line square to the
+          // way it goes, by as far as it goes over how high its middle is, as it goes; and whatever is
+          // left between that and the standing shape taken out evenly on the way)
+          const n = b.n,
+            c0 = [0, 0, 0],
+            ct = [0, 0, 0];
+          const st = new Float64Array(n * 3);
+          for (let i = 0; i < n * 3; i += 3) {
+            this.stand(b, i, at);
+            for (let r = 0; r < 3; r++) {
+              st[i + r] = at[r];
+              c0[r] += p[i + r] / n;
+              ct[r] += at[r] / n;
+            }
+          }
+          const [kx, kz, angle] = this.rollTo(b, c0, b.tx + b.ox, b.tz + b.oz);
+          const D = [ct[0] - c0[0], ct[1] - c0[1], ct[2] - c0[2]];
+          const turned = [0, 0, 0],
+            whole = [0, 0, 0];
+          for (let i = 0; i < n * 3; i += 3) {
+            const v = [p[i] - c0[0], p[i + 1] - c0[1], p[i + 2] - c0[2]];
+            turn(v, kx, kz, angle * f, turned);
+            turn(v, kx, kz, angle, whole);
+            for (let r = 0; r < 3; r++) x[i + r] = c0[r] + D[r] * f + turned[r] + (st[i + r] - (c0[r] + D[r] + whole[r])) * f;
+          }
+        } else
+          for (let i = 0; i < b.n * 3; i += 3) {
+            this.stand(b, i, at);
+            for (let r = 0; r < 3; r++) x[i + r] = p[i + r] + (at[r] - p[i + r]) * f;
+          }
         if (f >= 1) {
           this.tally.stood++;
           this.tally.age += age * H;
@@ -1798,6 +1850,7 @@ export class Crowd {
           b.aimAt = this.step;
         }
         blocked = Math.hypot(b.aimX - b.tx, b.aimZ - b.tz) > 0.02 * b.R;
+        if (blocked) b.freedAt = this.step;
         const ex = b.aimX - b.c[0],
           ez = b.aimZ - b.c[2];
         const dist = Math.hypot(ex, ez);
@@ -1903,7 +1956,16 @@ export class Crowd {
       // (not while something is standing on its place: it waits beside it)
       // (free: and one whose turn to burst is coming is taken to stand in time for it, or it would burst
       // whenever it happened to stop, a different moment each time round)
-      const late = C.free ? age > C.sleepAt + C.freeLate || (b.due >= 0 && this.step >= b.due - fuse - Math.round((C.easeFor + 0.2) / H)) : age > C.sleepAt + 1.6 && !blocked;
+      // (putt: she is given time to roll there: until `puttLate`, and for `puttGrace` after her place is
+      // cleared, if she was waiting beside it. Taken to stand at once, she slid the last radius or two
+      // without turning. But always in time for her own bursting: left to burst whenever she stood, the
+      // litters went out at other moments than their pushes were solved for, and it never came round the same)
+      const deadline = b.due >= 0 && this.step >= b.due - fuse - Math.round((C.easeFor + 0.2) / H);
+      const late = C.free
+        ? age > C.sleepAt + C.freeLate || deadline
+        : C.putt
+          ? (age > C.sleepAt + C.puttLate && this.step - b.freedAt > Math.round(C.puttGrace / H) && !blocked) || deadline
+          : age > C.sleepAt + 1.6 && !blocked;
       // (free: whether it has all but stopped is a line it crosses one step or the next, and what leans on
       // it as it settles goes by when it did: from one generation to the next that can swing back and
       // forth for good. So when each place's daughter came to stand is learnt with the rest, and kept)
@@ -1933,7 +1995,21 @@ export class Crowd {
         // out again for the new way up. Once the crowd comes round the same, so does this, exactly.
         if (b.litter && b.fixed && this.learnt[b.idx] < C.learn) {
           this.learnt[b.idx]++;
-          this.standAs(b);
+          if (C.putt) {
+            // (putt: the way up it will be once rolled to its place, as it will be in the easing below)
+            const c0 = [0, 0, 0];
+            for (let i = 0; i < b.n * 3; i += 3) for (let r = 0; r < 3; r++) c0[r] += b.x[i + r] / b.n;
+            const [kx, kz, angle] = this.rollTo(b, c0, b.tx + b.ox, b.tz + b.oz);
+            const h = Math.sin(angle / 2),
+              rq = [kx * h, 0, kz * h, Math.cos(angle / 2)],
+              q = b.q;
+            this.standAs(b, [
+              rq[3] * q[0] + rq[0] * q[3] + rq[1] * q[2] - rq[2] * q[1],
+              rq[3] * q[1] - rq[0] * q[2] + rq[1] * q[3] + rq[2] * q[0],
+              rq[3] * q[2] + rq[0] * q[1] - rq[1] * q[0] + rq[2] * q[3],
+              rq[3] * q[3] - rq[0] * q[0] - rq[1] * q[1] - rq[2] * q[2],
+            ]);
+          } else this.standAs(b);
         }
         this.pose(b);
         const { x, p } = b;

@@ -57,8 +57,14 @@ const sketch: Sketch<"webgpu"> = async ({ wrap, canvas, width, height, pixelRati
   const pipeline = new RenderPipeline(renderer);
   const compose = () => {
     const picture = pass(painter.scene, painter.camera);
-    const drawn = picture.getTextureNode("output");
-    const glow = bloom(drawn, lens.glow, lens.glowReach, lens.glowFrom);
+    // the reflection on its own, at a share of the sharpness (it is soft anyway), added back: all of it is
+    // light added to light, so this is the same picture
+    const reflected = pass(painter.below, painter.camera);
+    reflected.setResolutionScale(look.mirrorRes);
+    const above = picture.getTextureNode("output"),
+      below = reflected.getTextureNode("output");
+    const drawn = { sample: (at: typeof screenUV) => above.sample(at).add(below.sample(at)) };
+    const glow = bloom(above.add(below), lens.glow, lens.glowReach, lens.glowFrom);
     pipeline.outputNode = Fn(() => {
       const p = screenUV.sub(0.5);
       const far = dot(p.mul(vec2(wide, 1)), p.mul(vec2(wide, 1)));

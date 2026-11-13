@@ -106,6 +106,11 @@ sphere of dots with bright daughters inside. In 3D this time, `src/volvox/`.
   ball, the amount of jelly along the line of sight read off the angle of the surface to the eye.
   The floor is a mirror by drawing everything again upside down, softer and dimmer the higher above
   the floor it is, which is what makes it look like lacquer rather than glass.
+- **What a frame costs.** It is all light added to black, so the picture can be drawn in two parts and
+  added: the floor, the reflection and every cell spread over more than a few pixels are drawn at half
+  the sharpness (they are soft anyway), and only what is sharp at the whole. At 3200x2000 the slowest
+  frames went from 36 ms to 15 (`node tools/vperf.mjs 1600 1000 2` says where a frame goes, leaving out
+  one kind of thing at a time); held side by side the two pictures differ by under one level in 255.
 - Views worth trying in the panel: the camera high (80 degrees) for the first photograph; close
   (distance 6.5, focus on the near face) for the second.
 
@@ -248,7 +253,10 @@ for ever; colonies burst one after another, all the time, into six daughters eac
   damped Newton step follows. Rolling off a sister is too sudden for Newton's method (a glancing touch
   and a head-on one end far apart), so sisters do not push each other once out, and the solving keeps
   their ways from crossing and the litter leaning all together towards its places, so that none dashes
-  back across her mother alone. `crowd.html?spring` is the spring; `?free` an experiment where each
+  back across her mother alone. Whatever is still left when she is taken to stand she rolls, not slides:
+  the shape she has is turned as far as it goes over how high her middle is, and her place stands the
+  way up that leaves her; one waiting beside a place still taken is given time to roll on to it once it
+  is free. `crowd.html?spring` is the spring; `?free` an experiment where each
   keeps wherever she rolls (it comes round exactly, but the zoom makes any place error grow down the
   generations, and the crowd stands in itself). `tools/crollback.ts` measures turning round and going
   back.

@@ -60,6 +60,7 @@ export const look = {
   linger: 5, // seconds before the last of them has faded
   // the floor
   mirror: 0.3, // looking straight down; it is a whole mirror at a glancing angle
+  mirrorRes: 0.5, // the reflection is drawn at this share of the picture's sharpness, and added to it: it is soft anyway, and drawing it was most of what a frame cost
   rough: 0.14, // a reflection softens by this much of the height above the floor
   deep: 0.12, // and dims with it: the floor is not a perfect mirror
   pool: 0.5, // light spilled on the floor under a colony
@@ -99,6 +100,8 @@ const U = {
   focus: uniform(19),
   aperture: uniform(look.aperture),
   pixel: uniform(0.001), // one pixel, as an angle
+  pixelBelow: uniform(0.002), // one pixel of the reflection's own picture
+  softFrom: uniform(3), // a cell spread over more pixels than this (to twice as many) goes, by degrees, to be drawn with the reflection
   cells: uniform(look.cells),
   cellHalo: uniform(look.cellHalo),
   tooth: uniform(look.tooth),
@@ -142,8 +145,11 @@ const shine = (at: Node) => {
   return mix(float(1), float(1).sub(down).pow(5), float(1).sub(U.mirror)).mul(exp(at.y.abs().mul(U.deep).negate()));
 };
 
-// The cells of the skin, and the dust on the floor.
-function cellMaterial(mirror: boolean) {
+// The cells of the skin, and the dust on the floor. `part`: all of them; only those drawn sharp enough to
+// need the whole picture's sharpness; or only those spread over a few pixels or more, which are drawn
+// with the reflection at a share of it (each cell's light shared between the two as it softens, so the
+// sum is the same).
+function cellMaterial(mirror: boolean, part: "all" | "sharp" | "soft" = "all") {
   const m = glowing();
   const dA: Node = attribute("dA", "vec4"); // where, radius
   const dB: Node = attribute("dB", "vec4"); // which way the skin faces there, brightness
@@ -154,7 +160,14 @@ function cellMaterial(mirror: boolean) {
   const cv = cameraViewMatrix.mul(vec4(centre, 1)).xyz;
   const nv = cameraViewMatrix.mul(vec4(facing, 0)).xyz;
   const depth = cv.z.negate().max(0.05);
-  let soft2: Node = circle(depth).pow2().add(depth.mul(U.pixel).mul(0.55).pow2());
+  let soft2: Node = circle(depth)
+    .pow2()
+    .add(
+      depth
+        .mul(mirror ? U.pixelBelow : U.pixel)
+        .mul(0.55)
+        .pow2(),
+    );
   if (mirror) soft2 = soft2.add(dA.y.mul(U.rough).pow2());
   // Side on a cell is a short stroke along the way the skin faces: the comb of teeth at the rim.
   const sideways = length(nv.xy);
@@ -166,14 +179,18 @@ function cellMaterial(mirror: boolean) {
   const sharpness = r0.div(eb); // 1 in focus, towards 0 far out of it
   const REACH = mix(float(1.2), float(2.6), sharpness); // the square reaches this many radii: in focus, for the halo
   const off = axis.mul(corner.x).mul(ea).add(vec2(axis.y.negate(), axis.x).mul(corner.y).mul(eb)).mul(REACH);
-  m.vertexNode = cameraProjectionMatrix.mul(vec4(cv.add(vec3(off, 0)), 1));
+  // how many of the whole picture's pixels it is spread over, across
+  const soft = smoothstep(U.softFrom, U.softFrom.mul(2), eb.div(depth.mul(U.pixel)));
+  const share: Node = part === "sharp" ? float(1).sub(soft) : part === "soft" ? soft : float(1);
+  // (none of it here: the square is put out of sight, and costs nothing to fill)
+  m.vertexNode = share.greaterThan(0).select(cameraProjectionMatrix.mul(vec4(cv.add(vec3(off, 0)), 1)), vec4(0, 0, 2, 1));
   const q: Node = varying(corner.mul(REACH));
   // the same light over a bigger disc is dimmer
   const lit = dot(facing, vec3(KEY.x, KEY.y, KEY.z))
     .mul(U.key)
     .add(1);
   const back = mix(U.farSide, float(1), smoothstep(-0.25, 0.25, nv.z));
-  let gain: Node = r0.pow2().div(ea.mul(eb)).mul(dB.w).mul(lit).mul(back).mul(U.cells);
+  let gain: Node = r0.pow2().div(ea.mul(eb)).mul(dB.w).mul(lit).mul(back).mul(U.cells).mul(share);
   if (mirror) gain = gain.mul(shine(centre));
   const power: Node = varying(gain);
   const sharp: Node = varying(sharpness);
@@ -206,7 +223,9 @@ function jellyMaterial(mirror: boolean, daughter: boolean) {
   const flip = vec3(1, mirror ? -1 : 1, 1);
   const cv = cameraViewMatrix.mul(vec4(aC.xyz.mul(flip), 1)).xyz;
   const depth = cv.z.negate().max(0.05);
-  let soft2: Node = circle(depth).pow2().add(depth.mul(U.pixel).pow2());
+  let soft2: Node = circle(depth)
+    .pow2()
+    .add(depth.mul(mirror ? U.pixelBelow : U.pixel).pow2());
   // under the floor it is sharp where it touches and soft at the top
   if (mirror) soft2 = soft2.add(positionGeometry.y.mul(U.rough).pow2());
   const blur = sqrt(soft2).div(aC.w).min(3); // in its own radii
@@ -395,6 +414,7 @@ const chance = (i: number, k: number) => {
 
 export class Painter {
   scene = new Scene();
+  below = new Scene(); // the reflection and the floor: drawn on their own, smaller, and added
   camera = new PerspectiveCamera(look.fov, 1, 0.5, 400);
   target = new Vector3(0, 0.7, 0);
   focus = 0;
@@ -423,12 +443,12 @@ export class Painter {
   last = 0; // the time of the last picture
 
   constructor(sim: Sim) {
-    const add = (g: BufferGeometry, m: NodeMaterial, order: number) => {
+    const add = (g: BufferGeometry, m: NodeMaterial, order: number, into = this.scene) => {
       const mesh = new Mesh(g, m);
       mesh.frustumCulled = false;
       mesh.renderOrder = order;
       this.materials.push(m);
-      this.scene.add(mesh);
+      into.add(mesh);
       return mesh;
     };
 
@@ -438,12 +458,13 @@ export class Painter {
     const far = 120;
     fg.setAttribute("position", new BufferAttribute(Float32Array.of(-far, 0, -far, far, 0, -far, far, 0, far, -far, 0, far), 3));
     fg.setIndex([0, 2, 1, 0, 3, 2]);
-    add(fg, floorMaterial(uniformArray(this.pools, "vec4"), this.poolCount), 0);
+    // (with the reflection: it is only soft pools of light, nothing in it needs the full sharpness)
+    add(fg, floorMaterial(uniformArray(this.pools, "vec4"), this.poolCount), 0, this.below);
 
     this.tops = balls(sim.topX, sim.big, sim.tops);
     this.kids = balls(sim.kidX, sim.small, sim.kids);
-    add(this.kids.g, jellyMaterial(true, true), 1);
-    add(this.tops.g, jellyMaterial(true, false), 2);
+    add(this.kids.g, jellyMaterial(true, true), 1, this.below);
+    add(this.tops.g, jellyMaterial(true, false), 2, this.below);
     add(this.kids.g, jellyMaterial(false, true), 5);
     add(this.tops.g, jellyMaterial(false, false), 6);
     if (!sim.kids.length) this.kids.g.setDrawRange(0, 0);
@@ -554,7 +575,8 @@ export class Painter {
     ig.setIndex([0, 1, 2, 0, 2, 3]);
     this.cellAttrs = [dynamic(ig, "dA", this.dA, 4, true) as InstancedBufferAttribute, dynamic(ig, "dB", this.dB, 4, true) as InstancedBufferAttribute];
     ig.instanceCount = all;
-    add(ig, cellMaterial(false), 7);
+    add(ig, cellMaterial(false, "sharp"), 7);
+    add(ig, cellMaterial(false, "soft"), 4, this.below);
     // the reflection has the colonies' cells but not the dust: a second geometry on the same arrays
     const mg = new InstancedBufferGeometry();
     mg.setAttribute("position", ig.getAttribute("position"));
@@ -562,13 +584,14 @@ export class Painter {
     mg.setAttribute("dA", this.cellAttrs[0]);
     mg.setAttribute("dB", this.cellAttrs[1]);
     mg.instanceCount = total;
-    add(mg, cellMaterial(true), 3);
+    add(mg, cellMaterial(true), 3, this.below);
     this.counts = { cells: total, colonies: sim.tops.length, daughters: sim.kids.length, flying: 0 };
   }
 
   dispose() {
     for (const m of this.materials) m.dispose();
     this.scene.traverse((o) => (o as Mesh).geometry?.dispose());
+    this.below.traverse((o) => (o as Mesh).geometry?.dispose());
   }
 
   update(sim: Sim, aspect: number, pixelsHigh: number, seconds: number) {
@@ -787,6 +810,7 @@ export class Painter {
     U.focus.value = this.focus;
     U.aperture.value = look.aperture * 0.05;
     U.pixel.value = (2 * Math.tan((look.fov * Math.PI) / 360)) / pixelsHigh;
+    U.pixelBelow.value = U.pixel.value / look.mirrorRes;
     U.cells.value = look.cells;
     U.cellHalo.value = look.cellHalo;
     U.tooth.value = look.tooth;
