@@ -1,0 +1,29 @@
+{
+  "name": "09-membrane",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noemit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "ssam": "^0.22.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "@webgpu/types": "^0.1.74",
+    "playwright-core": "^1.65.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-glsl": "^1.5.5",
+    "vite-plugin-ssam-export": "^0.1.4",
+    "vite-plugin-ssam-ffmpeg": "^0.2.5",
+    "vite-plugin-ssam-git": "^0.1.4",
+    "vite-plugin-ssam-timelapse": "^0.1.6"
+  }
+}
