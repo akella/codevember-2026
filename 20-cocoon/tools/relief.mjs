@@ -1,0 +1,36 @@
+// node tools/relief.mjs <out.bin>: the relief the page makes (src/relief.ts), read back, for bake/relief_check.py.
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+import os from "node:os";
+const base = os.homedir() + "/Library/Caches/ms-playwright/chromium-1243/";
+const sub = fs.readdirSync(base).find((d) => d.startsWith("chrome-"));
+const app = fs.readdirSync(base + sub).find((d) => d.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}${sub}/${app}/Contents/MacOS/${app.replace(".app", "")}`, headless: true });
+const page = await browser.newPage();
+page.on("console", (m) => m.type() === "error" && !m.text().includes("404") && console.log(m.text().slice(0, 500)));
+await page.goto((process.env.URL ?? "http://localhost:5420/") + "rain.html");
+const b64 = await page.evaluate(async () => {
+  const { makeRelief } = await import("/src/relief.ts");
+  const head = await (await fetch("/compact/cocoon.json")).json();
+  const device = await (await navigator.gpu.requestAdapter()).requestDevice();
+  const t0 = performance.now();
+  const { texture, relief } = makeRelief(device, head);
+  await device.queue.onSubmittedWorkDone();
+  console.log("made");
+  const ms = performance.now() - t0;
+  const { u, v, layers } = head.detail;
+  const size = u * v * 4 * layers;
+  const back = device.createBuffer({ size: size + relief.size, usage: 9 });
+  const e = device.createCommandEncoder();
+  e.copyTextureToBuffer({ texture }, { buffer: back, bytesPerRow: u * 4, rowsPerImage: v }, [u, v, layers]);
+  e.copyBufferToBuffer(relief, 0, back, size, relief.size);
+  device.queue.submit([e.finish()]);
+  await back.mapAsync(1);
+  const a = new Uint8Array(back.getMappedRange());
+  let s = "";
+  for (let i = 0; i < a.length; i += 32768) s += String.fromCharCode(...a.subarray(i, i + 32768));
+  return [btoa(s), ms];
+});
+fs.writeFileSync(process.argv[2] ?? "bake/data/relief.bin", Buffer.from(b64[0], "base64"));
+console.log(`made in ${b64[1].toFixed(0)} ms`);
+process.exit(0);
