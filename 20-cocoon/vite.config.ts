@@ -23,6 +23,6 @@ export default defineConfig({
   build: {
     outDir: "./dist",
     assetsDir: ".",
-    rollupOptions: { input: { main: "index.html", cocoon: "cocoon.html", sun: "sun.html", film: "film.html", lantern: "lantern.html", macro: "macro.html" } },
+    rollupOptions: { input: { main: "index.html", cocoon: "cocoon.html", sun: "sun.html", film: "film.html", lantern: "lantern.html", macro: "macro.html", notes: "notes.html" } },
   },
 });

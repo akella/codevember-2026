@@ -8,7 +8,8 @@ of every fibre.
 Published (the build's pages): **`index.html`**, cocoons let down into the dark, aglow, torn from their webs and
 falling ("Aglow and falling" below); **`cocoon.html`**, the first page, four cocoons on a thread; **`sun.html`**,
 the same under a rising sun, and **`film.html`**, lit by a film (or a webcam, or a video of yours); **`lantern.html`**,
-rain with light inside; **`macro.html`**, the studio's white cocoons up close. Each has the others in a bar at its top. The other pages are still in the source, for reference, but not built.
+rain with light inside; **`macro.html`**, the studio's white cocoons up close; and **`notes.html`**, how it works (made from the figures and
+numbers in this file, its pictures embedded, with the lamps to mix by hand). Each has the others in a bar at its top. The other pages are still in the source, for reference, but not built.
 The loop for X: `URL='http://localhost:5420/?dpr=2' DPR=2 node tools/film.mjs output/cocoon_x.mp4` (about 15 minutes; keep
 the card free while it runs, or a frame can stall it).
 
