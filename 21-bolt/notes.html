@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bolt Explained</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: as the cocoon and erosion notes. Contents stay at the left, one reading column, figures run wider than the text. A night sea and amber for its colours. */
+:root {
+  --bg: #f2f0ee; --surface: #faf9f7; --ink: #1c1a1d; --soft: #625c66; --line: #d9d4d2; --sea: #a2500f; --sand: #3d5a86;
+  --c-bar: #d0823a; --c-fixed: #8f9bb8; --air: #e8e4e1;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --text: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b0c11; --surface: #13141b; --ink: #ece6dd; --soft: #a39c98; --line: #272832; --sea: #f0a35c; --sand: #9db4dc;
+  --c-bar: #d98a42; --c-fixed: #5d6a8c; --air: #171821; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0b0c11; --surface: #13141b; --ink: #ece6dd; --soft: #a39c98; --line: #272832; --sea: #f0a35c; --sand: #9db4dc;
+  --c-bar: #d98a42; --c-fixed: #5d6a8c; --air: #171821; color-scheme: dark }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.62 var(--text); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 5rem }
+img { max-width: 100% }
+.sheet { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem 3.5rem }
+header.top { padding-block: 2.5rem 0; grid-column: 1 / -1; display: grid; gap: 1.4rem }
+h1 { font: 700 clamp(2.3rem, 6vw, 4.1rem)/1 var(--display); letter-spacing: -.02em; margin: 0; text-wrap: balance }
+.lead { font-size: 1.16rem; line-height: 1.55; max-width: 60ch; margin: 0; color: var(--ink) }
+.heroimg { width: 100%; height: auto; display: block }
+h2 { font: 700 clamp(1.55rem, 3vw, 2.05rem)/1.12 var(--display); letter-spacing: -.012em; margin: 0; text-wrap: balance }
+h3 { font: 600 1.08rem/1.3 var(--text); margin: .8rem 0 0 }
+p, ul, ol { margin: 0; max-width: 66ch }
+ul, ol { padding-left: 1.2em; display: grid; gap: .4rem }
+a { color: var(--sea) }
+code, .num { font-family: var(--mono); font-size: .88em }
+code { overflow-wrap: anywhere }
+main { display: grid; gap: 4.5rem; min-width: 0 }
+section { display: grid; gap: 1.1rem; min-width: 0; scroll-margin-top: 1.5rem; grid-template-columns: minmax(0, 1fr) }
+nav { font-size: .93rem }
+nav b { display: block; font: 500 .74rem/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin-bottom: .6rem }
+nav ol { list-style: none; padding: 0; gap: 0; border-left: 1px solid var(--line) }
+nav a { display: block; padding: .28rem 0 .28rem .9rem; color: var(--soft); text-decoration: none; border-left: 2px solid transparent; margin-left: -1px }
+nav a:hover, nav a:focus-visible { color: var(--ink); border-left-color: var(--sea) }
+@media (min-width: 980px) { .sheet { grid-template-columns: 190px minmax(0, 1fr) } nav { position: sticky; top: calc(1.5rem + env(safe-area-inset-top, 0px)); align-self: start } }
+@media (max-width: 979px) { nav ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); border-left: 0 } nav a { padding-left: 0 } }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-top: 1px solid var(--line); margin: 0 }
+.facts div { padding: .75rem .9rem .75rem 0; border-bottom: 1px solid var(--line) }
+.facts dt { font-size: .84rem; color: var(--soft) } .facts dd { margin: 0; font-weight: 600 }
+figure { margin: .4rem 0; display: grid; gap: .6rem; min-width: 0 }
+figcaption, .cap { font-size: .9rem; line-height: 1.5; color: var(--soft); max-width: 72ch; margin: 0 }
+figure img { display: block; max-width: 100%; height: auto }
+.eq { font: 400 .9rem/1.7 var(--mono); background: var(--surface); border: 1px solid var(--line); padding: .85rem 1rem; margin: 0; overflow-x: auto; white-space: pre; color: var(--ink) }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem } .two img { width: 100% }
+.two figure { margin: 0; gap: .3rem } .two figcaption { font-size: .82rem }
+@media (max-width: 640px) { .two { grid-template-columns: minmax(0, 1fr) } }
+.tabs { display: flex; flex-wrap: wrap; gap: .4rem }
+button { font: 500 .9rem/1.2 var(--text); color: var(--ink); background: var(--surface); border: 1px solid var(--line); padding: .5rem .8rem; cursor: pointer; border-radius: 3px }
+button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px }
+.stage img { width: 100%; max-width: 900px }
+.stage figure { margin: 0 }
+.wide { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: .93rem; min-width: 560px }
+th { text-align: left; font-weight: 600; font-size: .84rem; color: var(--soft); padding: .4rem .8rem .4rem 0; border-bottom: 1px solid var(--line); white-space: nowrap }
+td { padding: .42rem .8rem .42rem 0; border-bottom: 1px solid var(--line); vertical-align: top }
+td.n { font-family: var(--mono); font-size: .86rem; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right }
+td .bar { display: block; height: 12px; margin-top: .42em; background: var(--c-bar); border-radius: 0 4px 4px 0 }
+td .bar.fixed { background: var(--c-fixed) }
+td.b { width: 30%; min-width: 130px }
+tr.total td { font-weight: 600 }
+.note { border-top: 1px solid var(--line); padding-top: .9rem; color: var(--soft); font-size: .95rem }
+.note p { max-width: 80ch }
+</style>
+</head>
+<body>
+<div class="sheet">
+<header class="top">
+  <p class="cap"><a href="./">Back to the storm</a></p><h1>Bolt Explained</h1>
+  <p class="lead">Clouds drift over a night sea on the wind. For a few seconds, as they pass, the ones in the middle line up into a monkey’s head, and half a loop later into a dragon, and then they are only clouds again. Lightning runs through them all the while, a lighthouse turns its lamp below, and it rains where the bolts come down. This page describes how that 40 second loop is found, moved, lit and drawn, and what a frame costs.</p>
+  <img class="heroimg" src="./notes/hero.jpg" width="1400" height="700" alt="A cloud in the shape of a monkey’s head lit amber from inside by lightning, a bolt running down from it into a dark sea, a small striped lighthouse to the left">
+  <dl class="facts">
+    <div><dt>Loop</dt><dd>40 s, closes on itself</dd></div>
+    <div><dt>Clouds</dt><dd>10 scanned-quality volumes, used 43 times</dd></div>
+    <div><dt>Shapes</dt><dd>Suzanne of 12 clouds, the Stanford dragon of 23</dd></div>
+    <div><dt>Bolts</dt><dd>6, of 8,580 pieces, 56 strikes a loop</dd></div>
+    <div><dt>Light</dt><dd>197,000 photons a bolt, traced again and again</dd></div>
+    <div><dt>Download</dt><dd>9.5 MB, 7.5 of it clouds</dd></div>
+    <div><dt>Frame</dt><dd>14 to 17 ms on an M1 Max</dd></div>
+  </dl>
+</header>
+
+<nav aria-label="Contents"><b>Contents</b><ol>
+  <li><a href="#when">What runs when</a></li><li><a href="#found">Shapes found in clouds</a></li><li><a href="#wind">Going by on the wind</a></li><li><a href="#march">Marching clouds that move</a></li><li><a href="#bolts">The bolts</a></li><li><a href="#light">Their light</a></li><li><a href="#sea">Sea, rain and air</a></li><li><a href="#house">The lighthouse</a></li><li><a href="#picture">The picture</a></li><li><a href="#frame">One frame, timed</a></li><li><a href="#steady">Kept at sixty</a></li><li><a href="#bytes">What is downloaded</a></li><li><a href="#checks">How it is checked</a></li><li><a href="#limits">What is not real</a></li>
+</ol></nav>
+
+<main>
+<section id="when">
+  <h2>What runs when</h2>
+  <p>Nothing here is a film. The clouds are real volumes, marched every frame where the wind has put them; the lightning’s light is traced through them as they move. What is done ahead is only what does not change: where the clouds must stand to be seen as a head, and how far every bit of empty air is from the nearest cloud.</p>
+  <div class="wide"><table>
+    <thead><tr><th>When</th><th>What</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Once, offline</td><td>Ten clouds of a free pack are packed to 8 bits a voxel at half size; Suzanne and the dragon are turned into grids of distances from their skin; the lighthouse, its rock and its keeper are built</td><td><code>tools/pack-clouds.py</code>, <code>suzanne-cloud.py</code>, <code>dragon-cloud.py</code>, <code>lighthouse.py</code></td></tr>
+      <tr><td>Once, offline</td><td>Where each cloud goes, for the page’s usual settings: a search of a few seconds, kept as 7 KB</td><td><code>src/collage/arrange.ts</code>, <code>src/drift/laid.json</code></td></tr>
+      <tr><td>Once, at page load</td><td>The ten clouds go into one 3D texture, with smaller copies of it for skipping and for shade; a distance field is made over it; six bolts are grown</td><td><code>src/drift/index.ts</code>, <code>src/bolt.ts</code></td></tr>
+      <tr><td>Every frame</td><td>Where each cloud is; a little more of the bolts’ light; the march; the bolts, the lighthouse, the water; lens and film curve</td><td><code>src/drift/drift.wgsl</code>, <code>show.wgsl</code>, <code>three-house.ts</code></td></tr>
+      <tr><td>When a setting asks</td><td>The search again, in workers, if the clouds’ number or sizes are changed</td><td><code>src/collage/worker.ts</code></td></tr>
+    </tbody></table></div>
+  <p>It runs on three.js’s WebGPU renderer, inside a small sketch runner. The lighthouse, its rock and its keeper are a three.js scene with a node material, drawn twice a frame into pictures that the page’s own passes, written straight in WGSL, go on drawing into on the same device: the clouds, the bolts and their light, the water. <a href="./raw.html">A second page</a> is the same storm without three.js drawing anything. The two come out the same, pixel for pixel but for a few in a flash, and as fast.</p>
+</section>
+
+<section id="found">
+  <h2>Shapes found in clouds</h2>
+  <p>The first tries filled the shape of a head with vapour, and looked like it: fog poured into a mould. What was wanted was the other thing, the face you find in a real cloud. So the clouds are left alone. They are whole clouds from a pack of volumes, kept upright, and only their places are chosen: which cloud, turned how far, mirrored or not, leaning a little, how large, and where.</p>
+  <p>The choosing is a search by simulated annealing. Each cloud is first drawn flat from twelve sides, as how much of it a ray from the front goes through. A try at an arrangement is the sum of those pictures, seen in perspective from where the eye will be; it is scored against the outline of the shape, cell by cell, on a grid of 6 cm cells. Sixty thousand small changes are tried for Suzanne and ninety thousand for the dragon, each kept if it is better and sometimes if it is not.</p>
+  <pre class="eq">score  =  Σ over cells   weight · ( covered(cell) − wanted(cell) )²
+
+covered = 1 − exp( −depth of cloud before the cell · 40 )      wanted = 1 inside the outline, 0 outside
+weight  = 1,  + 3 in the eyes,  + 2 round them        (the dragon: + 3 in the air close outside it, × 6 between its jaws, × 2 over its head)</pre>
+  <p>Likeness is asked for only at this coarse scale and only from the front, so close to, the clouds are just clouds. What made the head read was not more cloud but less: two gaps kept open for her eyes, and lightning routed behind them so that they glow. The dragon has no eyes to keep; it is read by its gaps instead, the open jaws, the air between its coils and under its neck.</p>
+  <figure>
+    <div class="tabs" role="tablist" data-tabs="found"></div>
+    <div class="stage" data-stage="found">
+      <figure data-name="Suzanne, from the front"><img src="./notes/day-suzanne.jpg" width="1200" height="700" alt="By day, a group of twelve cumulus clouds that together make a monkey’s head with two eye holes"></figure>
+      <figure data-name="Turned 35°"><img src="./notes/turn-35.jpg" width="1200" height="700" alt="The same clouds from 35 degrees to one side: the head is going"></figure>
+      <figure data-name="Turned 70°"><img src="./notes/turn-70.jpg" width="1200" height="700" alt="The same clouds from 70 degrees to one side: a heap of clouds"></figure>
+      <figure data-name="The dragon"><img src="./notes/day-dragon.jpg" width="1200" height="700" alt="By day, twenty-three clouds that together make a dragon seen from its side, with open jaws and two gaps between its coils"></figure>
+    </div>
+    <figcaption>The scene by day (“daylight, for the shape” among the looks in the panel), at the moments they are there. Both are only what they seem from where the eye is: turned, she is a heap of clouds. Each stands turned a little to face the eye, since the depth of the clouds would close an eye seen from the side.</figcaption>
+  </figure>
+  <p>The search takes three to six seconds, so its answers for the usual settings are kept with the page, 7 KB of places. It runs again, off the main thread, only when a setting that changes the arrangement is touched.</p>
+</section>
+
+<section id="wind">
+  <h2>Going by on the wind</h2>
+  <p>All the clouds ride one wind, which takes them 17 units across in a loop and round again. Besides it each has a way of its own: the higher ones go faster, each wanders and turns a little, and they stand further apart the longer it is from their moment. Those ways are made from the sine and one less the cosine of where the loop is, so they are exactly nothing at one instant: the only moment the clouds stand where the search put them.</p>
+  <pre class="eq">place(cloud, t)  =  where it was put  +  wind(t)  +  own speed · sin(φ) · T/2π  +  spread · (1 − cos φ)/2
+
+φ = 2π (t − its moment) / T        T = 40 s        Suzanne’s moment 10 s, the dragon’s 30 s</pre>
+  <p>The wind is not even. It drops to a fifth of its speed as each shape comes together and makes it up between, so a shape lingers; it comes in faster than it leaves, with a gust between, so the two halves of the loop do not look like a slide being changed. None of that moves a cloud at its moment, and all of it comes round in 40 seconds, so the loop closes without a join.</p>
+  <p>Eight more clouds stand further back, kept clear of where the shapes form, so the sky is never empty and the shapes are not the only things in it.</p>
+</section>
+
+<section id="march">
+  <h2>Marching clouds that move</h2>
+  <p>A still version of this stamps the clouds into one block of 90 million voxels and marches that. It cannot be remade every frame. So here nothing is stamped: the ten clouds lie side by side in one 3D texture, and each of the 43 clouds in the sky is one small matrix that takes a place in the world to a place in that texture. A ray asks the clouds it is in, and the densest answer wins.</p>
+  <p>Asked naively that is far too much asking. Four things cut it down, each checked to leave the picture as it was:</p>
+  <ul>
+    <li><b>Tiles.</b> For each 16 × 16 pixels of the picture, which clouds can show there at all, as 64 bits.</li>
+    <li><b>The clouds a ray is in.</b> A ray keeps the clouds whose boxes it is inside at that step, and works them out again only where it enters or leaves one.</li>
+    <li><b>A distance field.</b> Made once at load in half a second: for every two voxels each way of every cloud, how far the nearest cloud that could be seen is. A step in empty air reads nothing more and leaps that far.</li>
+    <li><b>Never asking the loser.</b> A coarse copy holds the most there is in each eight voxels; a cloud whose most is under what another has already given is not read.</li>
+  </ul>
+  <div class="wide"><table>
+    <thead><tr><th>For each marched pixel</th><th>Suzanne’s moment</th><th>The dragon’s</th></tr></thead>
+    <tbody>
+      <tr><td>Steps along the ray</td><td class="n">7.2</td><td class="n">10.6</td></tr>
+      <tr><td>of them in cloud that shows</td><td class="n">1.1</td><td class="n">1.9</td></tr>
+      <tr><td>Reads of a cloud’s voxels</td><td class="n">5.6</td><td class="n">8.6</td></tr>
+      <tr><td>before the distance field</td><td class="n">15.0</td><td class="n">24.7</td></tr>
+    </tbody></table></div>
+  <p>The march runs on 0.8 million pixels whatever the window’s size, and is brought up to the screen by a Catmull-Rom filter, which keeps the clouds’ edges where a soft one blurs them. The fine fraying of those edges is noise that belongs to each cloud and turns with it; when it belonged to the sky, clouds seemed to change their shape between one flash and the next, as they slid through it unseen in the dark.</p>
+</section>
+
+<section id="bolts">
+  <h2>The bolts</h2>
+  <p>A bolt is grown cell by cell from one waypoint to the next, after Yun and others (2017): each new cell is chosen by how hard the place it is going pulls, over how hard what has already grown pushes. Waypoints give it its route and the zigzag between; forks and sparks come off it the same way. Six are grown when the page loads, three for each shape: behind Suzanne’s eyes, through her ears, out of her chin to the sea; out of the dragon’s jaws to the water, behind the gaps of its coils, along its back.</p>
+  <p>They are drawn as ribbons that face the eye, a white core and a wide soft skin, 8,580 pieces in all. How much cloud stands between each piece and the eye is worked out once a piece in a pass of its own, 64 looks through the clouds from each of its ends, so a bolt goes behind a cloud and comes out again without any sorting. The same is done towards the eye’s image under the water, for the bolt’s reflection.</p>
+  <p>A loop has 56 strikes, each flickering up to three times more as real ones do, and more of them fall while a shape is there. A strike belongs to the bolts of whichever shape’s time it is. Bolts ride with their cloud; the ones that come down to the sea strike only while the wind has dropped under 45% of its speed, so that a bolt standing on the water is not seen to slide along it.</p>
+</section>
+
+<section id="light">
+  <h2>Their light</h2>
+  <p>Lightning inside a cloud is seen as the cloud. That light is traced, not guessed: 197,000 photons leave each bolt from along its length and wander through a coarse copy of the clouds, turned aside again and again, leaving a little light in every cell of a 128 × 88 × 96 grid they pass through. The grid rides the wind with whichever shape’s time it is.</p>
+  <figure>
+    <div class="tabs" role="tablist" data-tabs="light"></div>
+    <div class="stage" data-stage="light">
+      <figure data-name="Moonlight alone"><img src="./notes/light-moon.jpg" width="1400" height="880" alt="The head of clouds at night, barely seen, blue-grey"></figure>
+      <figure data-name="The bolts’ light"><img src="./notes/light-plain.jpg" width="1400" height="880" alt="The same lit from inside by amber light, smooth as a lampshade"></figure>
+      <figure data-name="With detail picked out"><img src="./notes/light-shade.jpg" width="1400" height="880" alt="The same with every billow lit on the side towards the bolts and dark behind"></figure>
+    </div>
+    <figcaption>The traced light is right but soft, since its grid is coarse: a lampshade. The last step looks once from each place towards where the bolts are, in the fine clouds, and darkens what has cloud standing that way. That is what gives the billows back.</figcaption>
+  </figure>
+  <p>Since the clouds move, the light is traced over and over, 8,192 photons a frame. Three things about that were learnt the hard way:</p>
+  <ul>
+    <li><b>The same photons every time.</b> With new random ones each time, the grain of the light changed several times a second and read as the cloud itself shifting.</li>
+    <li><b>A little every frame.</b> A big lot on every other frame made heavy frames and light ones by turns, and the heavy ones missed the screen’s refresh. That alone was the difference between 44 and 54 frames a second at the dragon.</li>
+    <li><b>Detail shaded towards the bolts,</b> not towards where the traced light happens to grow brighter, which flips with every strike.</li>
+  </ul>
+  <p>Clouds outside the grid are lit more simply: each bolt is taken as a line of light, dimming with distance, with three looks through the cloud’s own coarse copy for its shadow side. Moonlight and the sky’s are kept in another grid, an eighth of it worked out again each frame.</p>
+</section>
+
+<section id="sea">
+  <h2>Sea, rain and air</h2>
+  <p>The sea is a plane with ten sine waves on it, mostly coming towards the eye, each fading out before it would be smaller than a pixel so the far water does not glitter. What it shows of the clouds is a second, coarser march along each pixel’s reflected ray. The bolts are drawn again upside down into a picture half the size, and the water looks into that along the same ray, blurred a little down the screen: the long wavering streaks.</p>
+  <figure class="two">
+    <figure><img src="./notes/rain-off.jpg" width="1120" height="660" alt="A bolt coming down from a cloud to the sea through clear air"><figcaption>Without rain.</figcaption></figure>
+    <figure><img src="./notes/rain-on.jpg" width="1120" height="660" alt="The same bolt with slanting shafts of rain lit amber round it"><figcaption>With it: shafts under the cloud, slanted by the wind, lit by the bolt near them.</figcaption></figure>
+  </figure>
+  <p>Rain falls where there is cloud above, known from a small map of the cloud cover made every other frame. It is 24 looks along each ray through streaks of noise that fall twenty times in a loop, and it is dark until a bolt close by lights it. Far off, over the horizon, other storms flicker in the quiet between the two shapes; the air round each near strike glows; far clouds and far water fade a little towards the colour of the sky.</p>
+</section>
+
+<section id="house">
+  <h2>The lighthouse</h2>
+  <p>The lighthouse, its rock and its keeper are ordinary triangles, 13,500 of them, built by a script in Blender and drawn by three.js after the clouds with a depth buffer, so the tower hides the bolts behind it. It is lit by each bolt from the side that bolt is on, with glints on the wet rock; by its own lamp close to; and by the moon hardly at all. Two beams turn once in eight seconds, seen in the air as light scattered towards the eye and on the bases of the clouds as they pass over.</p>
+  <figure class="two">
+    <figure><img src="./notes/house-dark.jpg" width="840" height="560" alt="The lighthouse at night: only its lantern, a lit window and a beam"><figcaption>Between strikes: the lamp, a window, a beam.</figcaption></figure>
+    <figure><img src="./notes/house-flash.jpg" width="840" height="560" alt="The lighthouse in a flash: red and white bands, wet rock catching the light"><figcaption>In a flash: the tower, the rock, and at its foot a keeper in a yellow oilskin, seen only then.</figcaption></figure>
+  </figure>
+</section>
+
+<section id="picture">
+  <h2>The picture</h2>
+  <p>Everything is added up in light, not in screen colours, and only then turned into a picture. The curve that does it is AgX, which takes very bright colour towards white as film does, where a simpler curve pushes it to a flat hard orange. After it the darks are leant a little blue and the lights warm. What glows spreads through seven halvings of the picture and back, a little redder than it left, and colours part slightly towards the corners, as in a lens.</p>
+  <figure>
+    <div class="tabs" role="tablist" data-tabs="looks"></div>
+    <div class="stage" data-stage="looks">
+      <figure data-name="Storm"><img src="./notes/look-storm.jpg" width="1200" height="640" alt="Amber lightning"></figure>
+      <figure data-name="Day"><img src="./notes/look-day.jpg" width="1200" height="640" alt="The same clouds by day, no lightning"></figure>
+      <figure data-name="Two colours"><img src="./notes/look-two-colours.jpg" width="1200" height="640" alt="Pink and blue lightning"></figure>
+      <figure data-name="Thin"><img src="./notes/look-thin.jpg" width="1200" height="640" alt="Thinner clouds, the light going deep into them"></figure>
+      <figure data-name="Cold white"><img src="./notes/look-cold-white.jpg" width="1200" height="640" alt="Blue-white lightning"></figure>
+    </div>
+    <figcaption>The four looks at the top of the page are the same scene with a few numbers changed: the bolts’ colours, how dense the clouds are, where the moon is. A fifth is in the panel only: day turns the lightning off and the moon into a sun, which is how the shapes were judged while they were being found. In motion the clouds’ edges shimmer a little in that light, at the march’s step, which the dark hides.</figcaption>
+  </figure>
+  <figure>
+    <img src="./notes/loader.jpg" width="1200" height="520" alt="The word bolting on a dark horizon, a small bolt striking its second letter, which glows">
+    <figcaption>While the page loads: plain CSS, there before any script is, and moving only what a busy page can still move.</figcaption>
+  </figure>
+</section>
+
+<section id="frame">
+  <h2>One frame, timed</h2>
+  <p>Timed on the card itself, with timestamp queries, on an M1 Max in a 1400 × 900 window at twice the pixels, the page running and the governor off: once about Suzanne’s moment and once about the dragon’s. On a card of this kind the passes of a frame overlap, so the split between them is rough; the sums are sound.</p>
+  <div class="wide"><table>
+    <thead><tr><th>Pass</th><th>What it does</th><th>Suzanne, ms</th><th>The dragon, ms</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>The march</td><td>Clouds, their reflection in the water, rain, the lamp’s beam, on 0.8 million pixels; and how much cloud hides each piece of the bolts</td><td class="n">11.4</td><td class="n">14.0</td><td class="b"><span class="bar" style="width:84%"></span></td></tr>
+      <tr><td>The light, kept up</td><td>The coarse copy of the clouds, a slice of the moonlight, the rain’s cover, 8,192 photons, the bolts’ light mixed by how bright each is now</td><td class="n">1.4</td><td class="n">1.6</td><td class="b"><span class="bar" style="width:10%"></span></td></tr>
+      <tr><td>To the screen</td><td>The march brought up to the window’s size; the bolts upside down, for the water</td><td class="n">0.45</td><td class="n">0.5</td><td class="b"><span class="bar" style="width:3%"></span></td></tr>
+      <tr><td>Bolts and lighthouse</td><td>Ribbons and triangles, at full size</td><td class="n">0.1</td><td class="n">0.1</td><td class="b"><span class="bar" style="width:1%"></span></td></tr>
+      <tr><td>Glow and film curve</td><td>Seven halvings and back, AgX, the grade</td><td class="n">0.4</td><td class="n">0.4</td><td class="b"><span class="bar" style="width:2%"></span></td></tr>
+      <tr class="total"><td>A frame</td><td></td><td class="n">13.7</td><td class="n">16.6</td><td></td></tr>
+    </tbody></table></div>
+  <p>The march is most of it, and what it costs follows how many voxels it reads far more than how many pixels it draws: at a tenth of the pixels it took nearly as long. Every saving above was found by making the march count its own work, and none by guessing.</p>
+</section>
+
+<section id="steady">
+  <h2>Kept at sixty</h2>
+  <p>A frame at the dragon is close to the 16.7 ms a screen gives it, and machines differ. So the page watches the card’s own clock, from the first pass of a frame beginning to the last one ending. When that comes near what a frame may take, the march is eased: its steps a little longer, its rays stopped a little sooner, the water’s picture of the clouds coarser. When there is room again it goes back, slowly. Where a browser has no such clock, a cruder sign is used, how long work waits to be done, which only says that frames are queuing.</p>
+  <figure class="two">
+    <figure><img src="./notes/ease-0.jpg" width="1280" height="860" alt="The dragon, lit, at full quality"><figcaption>Not eased.</figcaption></figure>
+    <figure><img src="./notes/ease-1.jpg" width="1280" height="860" alt="The dragon, lit, fully eased, all but the same"><figcaption>Eased as far as it goes: 1.6 to 4% of pixels differ, slightly.</figcaption></figure>
+  </figure>
+  <p>On an M1 Max, capped at 60 as a screen caps it: left alone, the loop averages 55 frames a second and falls to 46 while the dragon is there; governed, it holds 60 throughout, eased all the way for most of the dragon’s half. It has little in reserve there, so a slower machine or a far larger window will still fall short.</p>
+</section>
+
+<section id="bytes">
+  <h2>What is downloaded</h2>
+  <div class="wide"><table>
+    <thead><tr><th>What</th><th>As</th><th>MB</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>Ten clouds</td><td>8 bits a voxel, the square root of density, half size, gzip</td><td class="n">7.46</td><td class="b"><span class="bar" style="width:100%"></span></td></tr>
+      <tr><td>The lighthouse, rock and keeper</td><td>glTF binary, colours at the corners</td><td class="n">0.98</td><td class="b"><span class="bar" style="width:13%"></span></td></tr>
+      <tr><td>The dragon’s outline</td><td>distances from its skin, a byte each, gzip</td><td class="n">0.53</td><td class="b"><span class="bar" style="width:7%"></span></td></tr>
+      <tr><td>Suzanne’s outline</td><td>the same</td><td class="n">0.25</td><td class="b"><span class="bar" style="width:3%"></span></td></tr>
+      <tr><td>three.js: its WebGPU renderer and node materials</td><td>JavaScript, gzip</td><td class="n">0.17</td><td class="b"><span class="bar" style="width:2%"></span></td></tr>
+      <tr><td>Code: the page, shaders, panel</td><td>JavaScript, gzip</td><td class="n">0.14</td><td class="b"><span class="bar" style="width:2%"></span></td></tr>
+      <tr class="total"><td>All of it</td><td></td><td class="n">9.53</td><td></td></tr>
+    </tbody></table></div>
+  <p>The two outlines are read by the bolts that crawl over the shapes, and by the search if it is run again. Where the clouds go, the thing the page is about, is 7 KB inside the code.</p>
+</section>
+
+<section id="checks">
+  <h2>How it is checked</h2>
+  <ul>
+    <li><b>Every speed-up against none.</b> Each one can be switched off, and the two pictures are taken at the same held moment and subtracted. The tiles, the clouds a ray is in and the bolts’ cover pass change no pixel; the leaps through empty air move the march’s dither and no more, under 0.4% of pixels.</li>
+    <li><b>Work, not time.</b> The machine it was made on was rarely quiet, and timings swung by more than the changes. The march was made to count its own steps and reads, which do not swing.</li>
+    <li><b>Light that lags.</b> Tracing fewer photons a frame means the light follows the clouds later. The loop was stepped a sixtieth at a time through four seconds of drifting at three rates of tracing; at a quarter of the first rate 0.5% of pixels differ, faintly.</li>
+    <li><b>The seam.</b> All 1,200 frames of the film are drawn with the page held at their moment, and the step from the last back to the first (1.03) is the step between the first two (0.92), well inside what neighbours differ by (0.3 to 4.9, lightning being what it is). The first film failed this: a strike still fading at the join was cut off, where the bolts go over from the dragon to Suzanne. Strikes now keep three seconds clear of it.</li>
+    <li><b>The picture, before the number.</b> Twice a change made the page twice as fast by drawing nothing. Since then a frame is looked at before its time is believed.</li>
+  </ul>
+</section>
+
+<section id="limits">
+  <h2>What is not real</h2>
+  <ul>
+    <li>The shapes are there from one side only, and only at one moment each. From anywhere else they are heaps of clouds.</li>
+    <li>The clouds are ten, used 43 times over, turned and mirrored. They do not form or thin out; they are carried.</li>
+    <li>Light is traced only inside a block that rides with the shape whose time it is. Clouds outside it are lit by a line of light and a guess at their own shadow.</li>
+    <li>Photons scatter evenly in every direction and are traced through a much coarser copy of the clouds. Real cloud throws most light forwards.</li>
+    <li>The rain is lit streaks of noise under a cloud, not drops; it makes no rings on the water.</li>
+    <li>The keeper is a third larger than life, or he would be a few pixels.</li>
+    <li>When the shape whose time it is changes, at the top and the middle of the loop, both are off the sides of a usual screen. On a very wide one it can be seen.</li>
+  </ul>
+  <div class="note"><p>Made with: the clouds of <i>CloudPack</i> by JangaFX (CC0); Suzanne, from Blender; the dragon, from the Stanford 3D Scanning Repository. Methods used: Yun, Son, Choi, Kim and Yoon, <i>Physically Inspired, Interactive Lightning Generation</i> (2017) for the bolts; Kim and Lin, <i>Physically Based Animation and Rendering of Lightning</i> (2004) for a strike that flickers again down its channel; Kirkpatrick, Gelatt and Vecchi, <i>Optimization by Simulated Annealing</i> (1983); Jensen and Christensen, <i>Efficient Simulation of Light Transport in Scenes with Participating Media using Photon Maps</i> (1998), for light left along a photon’s path; Kulla and Fajardo, <i>Importance Sampling Techniques for Path Tracing in Participating Media</i> (2012), for looking along a ray by angle about a lamp; Sobotka’s AgX, in the fit by Wrensch.</p></div>
+</section>
+</main>
+</div>
+<script>
+// a row of buttons for each set of pictures, one shown at a time
+for (const tabs of document.querySelectorAll("[data-tabs]")) {
+  const figures = [...document.querySelectorAll(`[data-stage="${tabs.dataset.tabs}"] > figure`)];
+  const show = (k) => {
+    figures.forEach((f, i) => (f.hidden = i !== k));
+    [...tabs.children].forEach((b, i) => b.setAttribute("aria-selected", String(i === k)));
+  };
+  figures.forEach((f, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.textContent = f.dataset.name;
+    b.addEventListener("click", () => show(i));
+    tabs.append(b);
+  });
+  show(0);
+}
+</script>
+</body>
+</html>

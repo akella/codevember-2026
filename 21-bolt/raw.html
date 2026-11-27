@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bolt: in raw WebGPU</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+      body {
+        background: #05070c;
+      }
+      canvas {
+        display: block;
+      }
+      /* the looks to switch between, and the day's other pages under them (as erosion's, for a dark sky) */
+      #bar {
+        position: fixed;
+        top: calc(12px + env(safe-area-inset-top, 0px));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        max-width: calc(100vw - 16px);
+        font:
+          500 13px/1.3 system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        color: #f1e7da;
+        white-space: nowrap;
+      }
+      #bar > div {
+        display: flex;
+        padding: 3px;
+        border-radius: 99px;
+        background: rgb(255 255 255 / 0.1);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      #bar button {
+        all: unset;
+        padding: 6px 14px;
+        border-radius: 99px;
+        cursor: pointer;
+      }
+      #bar button[aria-pressed="true"] {
+        background: rgb(255 244 230 / 0.86);
+        color: #3a2414;
+      }
+      #bar nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px 16px;
+      }
+      #bar a {
+        font-size: 11px;
+        color: inherit;
+        opacity: 0.62;
+        text-underline-offset: 2px;
+      }
+      #bar a:hover {
+        opacity: 1;
+      }
+      #bar :focus-visible {
+        outline: 2px solid #f1e7da;
+        outline-offset: 2px;
+      }
+      /* narrow: below the counter and the panel's bar, which meet it in the corners */
+      @media (max-width: 860px) {
+        #bar {
+          top: calc(52px + env(safe-area-inset-top, 0px));
+        }
+        #bar button {
+          padding: 6px 10px;
+        }
+      }
+      /* What shows till the first picture is on the screen: the word on a night horizon, struck by a bolt now one
+         side and now the other, the light running out through the letters from the one struck and dying away like an
+         ember, all of it given back by the water. In the page itself, so it is there before any script is; only
+         transforms and opacity move, and those go on while the page is busy building its shaders. */
+      #loader {
+        --T: 3.6s;
+        position: fixed;
+        inset: 0;
+        z-index: 20000; /* (over the panel and the counter) */
+        overflow: hidden;
+        background: linear-gradient(#06070b 0%, #0b0b10 49.6%, #030304 50.4%, #010102 100%);
+        font: 400 clamp(34px, 9vmin, 96px) / 1 "Didot", "Bodoni 72", "Bodoni MT", Georgia, serif;
+        letter-spacing: 0.22em;
+        transition: opacity 1.1s ease 0.1s;
+      }
+      #loader.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #loader .scene,
+      #loader .sea {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 50%;
+      }
+      #loader .scene {
+        top: 0;
+      }
+      /* (the water: the same, upside down, dimmer, and gone by the bottom) */
+      #loader .sea {
+        top: 50%;
+        transform: scaleY(-1);
+        opacity: 0.32;
+        filter: blur(1.5px);
+        -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 70%);
+        mask-image: linear-gradient(to top, #000 0%, transparent 70%);
+      }
+      #loader .word {
+        position: absolute;
+        left: 50%;
+        bottom: 0.3em; /* (so the g stays above the water) */
+        transform: translateX(-50%);
+        padding-left: 0.22em; /* (letter-spacing leaves room after the last one only) */
+        white-space: nowrap;
+        color: #1c1714;
+      }
+      #loader .word span {
+        position: relative;
+        display: inline-block;
+      }
+      /* each letter lit twice over, once for each bolt, the glow running out from the one it struck */
+      #loader .word span::before,
+      #loader .word span::after {
+        content: attr(data-c);
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: #ffe2b8;
+        text-shadow: 0 0 0.12em #ffb15c, 0 0 0.45em #ff8a3c, 0 0 1.1em rgba(255, 110, 40, 0.55);
+        opacity: 0;
+        animation: ember var(--T) linear infinite;
+      }
+      #loader .word span::before {
+        animation-delay: calc(0.35s + var(--a));
+      }
+      #loader .word span::after {
+        animation-delay: calc(0.35s + var(--T) * 0.47 + var(--b));
+      }
+      #loader .bolt {
+        position: absolute;
+        top: 0;
+        bottom: 0.84em; /* (down to the top of the letters) */
+        width: 0.9em;
+        transform-origin: 50% 0;
+        opacity: 0;
+        animation: strike var(--T) linear infinite;
+      }
+      /* (font-size is on the loader: these em are the letters') */
+      #loader .bolt.one {
+        left: calc(50% - 2.22em);
+        animation-delay: 0.35s;
+      }
+      #loader .bolt.two {
+        left: calc(50% + 1.45em);
+        transform: scaleX(-1);
+        animation-name: strikeOther;
+        animation-delay: calc(0.35s + var(--T) * 0.47);
+      }
+      #loader svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      #loader path {
+        fill: none;
+        stroke: #fff6ea;
+        stroke-width: 2.2;
+        stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
+      }
+      #loader path.glow {
+        stroke: #ff9a4a;
+        stroke-width: 12;
+        opacity: 0.6;
+        filter: blur(6px);
+      }
+      /* the sky round it, lit */
+      #loader .flash {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(60% 75% at 50% 100%, rgba(255, 150, 70, 0.45), rgba(255, 120, 50, 0.1) 55%, transparent 80%);
+        opacity: 0;
+        animation: sky calc(var(--T) * 0.47) linear infinite;
+        animation-delay: 0.35s;
+      }
+      #loader p {
+        display: none;
+        position: absolute;
+        inset: 0;
+        place-content: center;
+        justify-items: center;
+        margin: 0 auto;
+        max-width: 22em;
+        color: #9a8f86;
+        font: 15px / 1.5 system-ui, sans-serif;
+        letter-spacing: 0;
+        text-align: center;
+      }
+      #loader.failed .scene,
+      #loader.failed .sea {
+        display: none;
+      }
+      #loader.failed p {
+        display: grid;
+      }
+      /* a faint leader comes down, the return stroke, two more, and gone */
+      @keyframes strike {
+        0% { opacity: 0.3; transform: scaleY(0); }
+        2% { opacity: 0.35; transform: scaleY(1); }
+        2.6% { opacity: 1; }
+        4% { opacity: 0.2; }
+        6% { opacity: 1; }
+        9% { opacity: 0.35; }
+        11% { opacity: 0.85; }
+        17% { opacity: 0; transform: scaleY(1); }
+        17.1%, 100% { opacity: 0; transform: scaleY(0); }
+      }
+      @keyframes strikeOther {
+        0% { opacity: 0.3; transform: scale(-1, 0); }
+        2% { opacity: 0.35; transform: scale(-1, 1); }
+        2.6% { opacity: 1; }
+        4% { opacity: 0.2; }
+        6% { opacity: 1; }
+        9% { opacity: 0.35; }
+        11% { opacity: 0.85; }
+        17% { opacity: 0; transform: scale(-1, 1); }
+        17.1%, 100% { opacity: 0; transform: scale(-1, 0); }
+      }
+      @keyframes ember {
+        0%, 2% { opacity: 0; }
+        2.8% { opacity: 1; }
+        4.2% { opacity: 0.45; }
+        6.2% { opacity: 1; }
+        9% { opacity: 0.6; }
+        11.5% { opacity: 0.9; }
+        24% { opacity: 0.32; }
+        45% { opacity: 0.08; }
+        60%, 100% { opacity: 0; }
+      }
+      @keyframes sky {
+        0%, 2% { opacity: 0; }
+        2.8% { opacity: 1; }
+        4.4% { opacity: 0.25; }
+        6.4% { opacity: 0.9; }
+        12% { opacity: 0.4; }
+        30%, 100% { opacity: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #loader .bolt,
+        #loader .flash {
+          display: none;
+        }
+        #loader .word span::before {
+          animation: none;
+          opacity: 0.55;
+        }
+        #loader .word span::after {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body data-shape="pair">
+    <div id="loader" role="status" aria-label="bolting">
+      <div class="scene" aria-hidden="true"><div class="flash"></div><div class="bolt one"><svg viewBox="0 0 40 100" preserveAspectRatio="none"><path class="glow" d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/><path d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/></svg></div><div class="bolt two"><svg viewBox="0 0 40 100" preserveAspectRatio="none"><path class="glow" d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/><path d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/></svg></div><div class="word"><span style="--a: 0.045s; --b: 0.225s" data-c="b">b</span><span style="--a: 0.000s; --b: 0.180s" data-c="o">o</span><span style="--a: 0.045s; --b: 0.135s" data-c="l">l</span><span style="--a: 0.090s; --b: 0.090s" data-c="t">t</span><span style="--a: 0.135s; --b: 0.045s" data-c="i">i</span><span style="--a: 0.180s; --b: 0.000s" data-c="n">n</span><span style="--a: 0.225s; --b: 0.045s" data-c="g">g</span></div></div>
+      <div class="sea" aria-hidden="true"><div class="flash"></div><div class="bolt one"><svg viewBox="0 0 40 100" preserveAspectRatio="none"><path class="glow" d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/><path d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/></svg></div><div class="bolt two"><svg viewBox="0 0 40 100" preserveAspectRatio="none"><path class="glow" d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/><path d="M24 0 L19 17 L25 24 L15 43 L22 49 L13 66 L19 71 L11 88 L16 92 L14 100 M15 43 L7 52 L9 57 L3 66 M13 66 L22 76 L20 80 L27 87"/></svg></div><div class="word"><span style="--a: 0.045s; --b: 0.225s" data-c="b">b</span><span style="--a: 0.000s; --b: 0.180s" data-c="o">o</span><span style="--a: 0.045s; --b: 0.135s" data-c="l">l</span><span style="--a: 0.090s; --b: 0.090s" data-c="t">t</span><span style="--a: 0.135s; --b: 0.045s" data-c="i">i</span><span style="--a: 0.180s; --b: 0.000s" data-c="n">n</span><span style="--a: 0.225s; --b: 0.045s" data-c="g">g</span></div></div>
+      <p></p>
+    </div>
+    <script>
+      // without WebGPU nothing will come, and with it something can still go wrong: say so, rather than strike for ever
+      {
+        const loader = document.getElementById("loader");
+        const say = (text) => {
+          if (loader.classList.contains("done")) return;
+          loader.classList.add("failed");
+          loader.querySelector("p").textContent = text;
+        };
+        if (!navigator.gpu) say("this one needs WebGPU: a recent Chrome, Edge or Safari");
+        addEventListener("error", (e) => say(e.message || "something went wrong"));
+        addEventListener("unhandledrejection", (e) => say(String((e.reason && e.reason.message) || e.reason || "something went wrong")));
+      }
+    </script>
+    <div id="bar">
+      <div role="group" aria-label="Look">
+        <button type="button" data-look="storm" aria-pressed="true">Storm</button>
+        <button type="button" data-look="two colours" aria-pressed="false">Two colours</button>
+        <button type="button" data-look="thin, see the bolts" aria-pressed="false">Thin</button>
+        <button type="button" data-look="cold white" aria-pressed="false">Cold white</button>
+      </div>
+      <nav aria-label="More">
+        <a href="./notes.html">how it works</a>
+        <a href="./">with three.js</a>
+        <a href="./drift.html">suzanne alone</a>
+        <a href="./dragon.html">the dragon alone</a>
+        <a href="./collage.html">standing still</a>
+        <a href="./head.html">a cloud of her</a>
+        <a href="./glass.html">the glass one that didn’t make it</a>
+      </nav>
+    </div>
+    <script type="module" src="./src/drift/index.ts"></script>
+  </body>
+</html>
