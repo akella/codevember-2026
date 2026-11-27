@@ -100,6 +100,7 @@ export const look = {
   coverBake: true, // how much cloud is before each piece of a bolt, worked out once a piece (not at each corner)
   shortlist: true, // at each step, only the clouds a ray is in are looked in
   rainMap: true, // the rain's cover from a map made a frame at a time
+  handover: true, // the light's block faded out as it goes over to the other shape (off: a far cloud's shade jumps then)
   jump: 1, // how much of the way to the nearest cloud a ray leaps, through the air (0: a little way only)
   // the lighthouse (in the pair)
   house: false,
@@ -242,7 +243,7 @@ const folders: Record<string, Key[]> = {
   "the bolts": ["cell", "eta", "forks", "sparks", "branches", "core", "hot", "white", "halo", "haloWide"],
   air: ["rain", "rainFrom", "rainFalls", "rainSlant", "haze", "hazeFrom", "farFlash", "farTone"],
   light: ["shadeToBolts", "flash", "skyFlash", "around", "reach", "toneA", "toneB", "near", "shade", "shadeDeep", "moon", "moonTone", "moonTurn", "moonHigh", "skyLight", "skyTone", "lots", "bakes", "blend"],
-  cloud: ["coverBake", "shortlist", "rainMap", "jump", "farStep", "cut", "seaStep", "thick", "aside", "fray", "fraySize", "boil", "step"],
+  cloud: ["coverBake", "shortlist", "rainMap", "handover", "jump", "farStep", "cut", "seaStep", "thick", "aside", "fray", "fraySize", "boil", "step"],
   ...(SHAPE !== "suzanne" ? { "the dragon, lighter": ["dragonStep", "fewer", "fewerPieces", "fewerSmallest", "fewerArrange"] as Key[] } : {}),
   "the clouds": [...(PAIR ? (["dragonPieces", "dragonArrange", "dragonSmallest", "dragonTilt"] as const) : []), "pieces", "arrange", "smallest", "largest", "eyesOpen", "loose", "deep", "cover", "power", "tilt", "ragged"],
   "the wind": ["span", "lull", "pin", "shear", "scatter", "gather", "spin", "extra", "sky", "focus"],
@@ -1414,7 +1415,12 @@ const sketch: Sketch<"webgpu"> = async ({ wrap, canvas }) => {
       put(19 + k * 3, ...c, lit * look.around);
       all += lit * look.around;
     }
-    put(35, look.reach, all, look.farStep, 0);
+    // (the light's block goes over from one shape to the other at the top and the middle of the loop, and what was in it
+    // is lit from then on as the clouds out of it are, a little otherwise: so for a second before all of them are, and
+    // for less than half of one after, the first strikes of the next coming soon)
+    const since = t % (LOOP / 2);
+    const handing = PAIR ? Math.min(since / 0.4, LOOP / 2 - since, 1) : 1;
+    put(35, look.reach, all, look.farStep, look.handover ? handing * handing * (3 - 2 * handing) : 1);
     const on = (!!houseMesh || !!house3) && look.house;
     const S = HOUSE_SCALE;
     put(36, look.houseX, look.waterAt + LAMP_AT * S, look.houseZ, (2 * Math.PI * t) / look.every);

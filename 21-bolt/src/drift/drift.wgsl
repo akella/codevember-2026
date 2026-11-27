@@ -392,7 +392,7 @@ fn cloud(o: vec3f, d: vec3f, jump: f32, cheap: bool) -> vec4f {
         let ext = v * P.thick.x;
         let w = local(p);
         let q = place(w);
-        let there = inBlock(w);
+        let there = inBlock(w) * P.reach.w; // (and not at all as the block goes over to the other shape: see `handing`)
         let g = textureSampleLevel(glow, lin, q, 0.0) * there;
         var lit = 1.0;
         var l = textureSampleLevel(still, lin, q, 0.0);
