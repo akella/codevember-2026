@@ -19,10 +19,13 @@ The loop for X, the thumbnail and the gallery's cover (`output/` is not committe
 
     npm run build && npx vite preview --port 5399 &
     URL=http://localhost:5399/ SET='{"thick":300}' node tools/film.mjs output/bolt_x.mp4 1024x1024 30      # about 12 minutes
-    URL=http://localhost:5399/ SET='{"thick":300}' AT=29.7 node tools/film.mjs output/bolt_thumbnail_2048.jpg
+    URL=http://localhost:5399/ SET='{"thick":300,"detail":8,"steady":false}' AT=29.7 node tools/film.mjs big.png 1600x1600
+    ffmpeg -i big.png -vf "crop=2300:2300:440:220,scale=2048:2048:flags=lanczos" -q:v 2 output/bolt_thumbnail_2048.jpg
 
 (from a built copy, so that nothing reloads the page while it is filmed; and with thinner clouds than the page's 800,
-which the light goes further into: a film is drawn a frame at a time, so what that costs does not matter there).
+which the light goes further into: a film is drawn a frame at a time, so what that costs does not matter there. The
+thumbnail is the dragon's part of that frame, drawn at 3,200 pixels and the clouds marched with 8 million, so that
+what is cut out of it is as sharp as the whole was; the cover is the same at 720.)
 
 ## How
 
